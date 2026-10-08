@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgBoho" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#faf5ef" />
+      <stop offset="50%" stop-color="#f5ebe0" />
+      <stop offset="100%" stop-color="#e3d5ca" />
+    </linearGradient>
+    <linearGradient id="pampasGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="60%" stop-color="#eddcd2" />
+      <stop offset="100%" stop-color="#d6ccc2" />
+    </linearGradient>
+    <linearGradient id="palmSun" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d4a373" />
+      <stop offset="100%" stop-color="#bc6c25" />
+    </linearGradient>
+  </defs>
+
+  <rect width="600" height="750" fill="url(#bgBoho)" />
+
+  <!-- Sun Spear Palm Fan in Background -->
+  <g transform="translate(300, 280)">
+    <path d="M 0 0 L -80 -140 L -60 -160 L -30 -130 L 0 -180 L 30 -130 L 60 -160 L 80 -140 Z" fill="url(#palmSun)" opacity="0.8" />
+    <path d="M 0 0 L 0 -180" stroke="#99582a" stroke-width="3" />
+  </g>
+
+  <!-- Boho Pampas Grass Plumes -->
+  <!-- Left Plume -->
+  <g transform="translate(220, 320) rotate(-20)">
+    <path d="M 0 180 Q -10 60 -20 -80" stroke="#b08968" stroke-width="6" fill="none" />
+    <ellipse cx="-20" cy="-40" rx="35" ry="90" fill="url(#pampasGrad)" opacity="0.9" filter="blur(2px)" />
+    <ellipse cx="-20" cy="-40" rx="25" ry="70" fill="#fdfbf7" opacity="0.95" />
+  </g>
+
+  <!-- Right Plume -->
+  <g transform="translate(380, 320) rotate(20)">
+    <path d="M 0 180 Q 10 60 20 -80" stroke="#b08968" stroke-width="6" fill="none" />
+    <ellipse cx="20" cy="-40" rx="35" ry="90" fill="url(#pampasGrad)" opacity="0.9" filter="blur(2px)" />
+    <ellipse cx="20" cy="-40" rx="25" ry="70" fill="#fdfbf7" opacity="0.95" />
+  </g>
+
+  <!-- Center Grand Plume -->
+  <g transform="translate(300, 290)">
+    <path d="M 0 200 L 0 -90" stroke="#b08968" stroke-width="7" fill="none" />
+    <ellipse cx="0" cy="-50" rx="40" ry="110" fill="url(#pampasGrad)" opacity="0.9" filter="blur(2px)" />
+    <ellipse cx="0" cy="-50" rx="30" ry="90" fill="#ffffff" opacity="0.95" />
+  </g>
+
+  <!-- Preserved Terracotta Pot -->
+  <g transform="translate(300, 560)">
+    <path d="M -70 0 L -50 120 L 50 120 L 70 0 Z" fill="#c97a54" stroke="#a75d38" stroke-width="4" />
+    <ellipse cx="0" cy="0" rx="70" ry="16" fill="#dda181" stroke="#a75d38" stroke-width="3" />
+    <ellipse cx="0" cy="120" rx="50" ry="12" fill="#9c5332" />
+  </g>
+
+  <rect x="180" y="675" width="240" height="40" rx="20" fill="rgba(255,255,255,0.85)" stroke="rgba(201,122,84,0.3)" />
+  <text x="300" y="700" fill="#8c4323" font-family="Georgia, serif" font-size="14" font-weight="bold" letter-spacing="2" text-anchor="middle">BOHO GOLDEN DUNE</text>
+</svg>

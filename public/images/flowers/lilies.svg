@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgLily" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="50%" stop-color="#f1f5f9" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+    <radialGradient id="lilyGlow" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#cbd5e1" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="whitePetal" cx="50%" cy="20%" r="80%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="70%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </radialGradient>
+  </defs>
+
+  <rect width="600" height="750" fill="url(#bgLily)" />
+  <circle cx="300" cy="360" r="280" fill="url(#lilyGlow)" />
+
+  <!-- Eucalyptus Stems -->
+  <path d="M 285 450 Q 295 580 300 680" stroke="#334155" stroke-width="12" stroke-linecap="round" fill="none" />
+  <path d="M 315 450 Q 305 580 300 680" stroke="#475569" stroke-width="12" stroke-linecap="round" fill="none" />
+
+  <!-- Casablanca Lily Center Blossom -->
+  <g transform="translate(300, 360)" filter="drop-shadow(0 12px 24px rgba(0,0,0,0.12))">
+    <!-- Star-shaped 6 Lily Petals -->
+    <!-- Petal Top -->
+    <path d="M 0 -20 C -25 -60 -40 -120 0 -170 C 40 -120 25 -60 0 -20 Z" fill="url(#whitePetal)" stroke="#cbd5e1" stroke-width="1.5" />
+    <!-- Petal Top-Right -->
+    <path d="M 0 -20 C 35 -50 110 -80 150 -50 C 130 10 70 20 0 -20 Z" fill="url(#whitePetal)" stroke="#cbd5e1" stroke-width="1.5" />
+    <!-- Petal Bottom-Right -->
+    <path d="M 0 0 C 40 30 120 70 130 130 C 70 140 20 60 0 0 Z" fill="url(#whitePetal)" stroke="#cbd5e1" stroke-width="1.5" />
+    <!-- Petal Bottom -->
+    <path d="M 0 0 C -20 40 -30 130 0 170 C 30 130 20 40 0 0 Z" fill="url(#whitePetal)" stroke="#cbd5e1" stroke-width="1.5" />
+    <!-- Petal Bottom-Left -->
+    <path d="M 0 0 C -40 30 -120 70 -130 130 C -70 140 -20 60 0 0 Z" fill="url(#whitePetal)" stroke="#cbd5e1" stroke-width="1.5" />
+    <!-- Petal Top-Left -->
+    <path d="M 0 -20 C -35 -50 -110 -80 -150 -50 C -130 10 -70 20 0 -20 Z" fill="url(#whitePetal)" stroke="#cbd5e1" stroke-width="1.5" />
+
+    <!-- Center Stamen and Golden Pollen Anthers -->
+    <circle cx="0" cy="-5" r="16" fill="#84cc16" opacity="0.8" />
+    <!-- 6 Anthers -->
+    <path d="M 0 -5 L 0 -55" stroke="#4ade80" stroke-width="3" />
+    <ellipse cx="0" cy="-57" rx="8" ry="4" fill="#ca8a04" />
+
+    <path d="M 0 -5 L 45 -35" stroke="#4ade80" stroke-width="3" />
+    <ellipse cx="47" cy="-37" rx="8" ry="4" transform="rotate(45 47 -37)" fill="#ca8a04" />
+
+    <path d="M 0 -5 L 45 25" stroke="#4ade80" stroke-width="3" />
+    <ellipse cx="47" cy="27" rx="8" ry="4" transform="rotate(-45 47 27)" fill="#ca8a04" />
+
+    <path d="M 0 -5 L 0 50" stroke="#4ade80" stroke-width="3" />
+    <ellipse cx="0" cy="52" rx="8" ry="4" fill="#ca8a04" />
+
+    <path d="M 0 -5 L -45 25" stroke="#4ade80" stroke-width="3" />
+    <ellipse cx="-47" cy="27" rx="8" ry="4" transform="rotate(45 -47 27)" fill="#ca8a04" />
+
+    <path d="M 0 -5 L -45 -35" stroke="#4ade80" stroke-width="3" />
+    <ellipse cx="-47" cy="-37" rx="8" ry="4" transform="rotate(-45 -47 -37)" fill="#ca8a04" />
+  </g>
+
+  <!-- Satin White Ribbon -->
+  <g transform="translate(300, 580)">
+    <rect x="-40" y="0" width="80" height="24" rx="4" fill="#ffffff" stroke="#cbd5e1" />
+    <path d="M -15 24 L -40 100" stroke="#ffffff" stroke-width="10" stroke-linecap="round" />
+    <path d="M 15 24 L 40 100" stroke="#ffffff" stroke-width="10" stroke-linecap="round" />
+  </g>
+
+  <rect x="180" y="675" width="240" height="40" rx="20" fill="rgba(255,255,255,0.85)" stroke="rgba(203,213,225,0.8)" />
+  <text x="300" y="700" fill="#334155" font-family="Georgia, serif" font-size="14" font-weight="bold" letter-spacing="2" text-anchor="middle">CELESTIAL LILIES</text>
+</svg>

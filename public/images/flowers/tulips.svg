@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgTulip" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#eff6ff" />
+      <stop offset="50%" stop-color="#ede9fe" />
+      <stop offset="100%" stop-color="#fae8ff" />
+    </linearGradient>
+    <linearGradient id="tulipPink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f472b6" />
+      <stop offset="100%" stop-color="#db2777" />
+    </linearGradient>
+    <linearGradient id="tulipPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c084fc" />
+      <stop offset="100%" stop-color="#7e22ce" />
+    </linearGradient>
+    <linearGradient id="tulipYellow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="100%" stop-color="#eab308" />
+    </linearGradient>
+    <linearGradient id="tulipOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+  </defs>
+
+  <rect width="600" height="750" fill="url(#bgTulip)" />
+  <circle cx="300" cy="360" r="270" fill="rgba(255,255,255,0.7)" />
+
+  <!-- Tall Tulip Stems -->
+  <path d="M 180 380 Q 240 540 280 680" stroke="#16a34a" stroke-width="10" stroke-linecap="round" fill="none" />
+  <path d="M 240 320 Q 270 520 295 680" stroke="#15803d" stroke-width="12" stroke-linecap="round" fill="none" />
+  <path d="M 300 300 Q 300 520 300 680" stroke="#166534" stroke-width="12" stroke-linecap="round" fill="none" />
+  <path d="M 360 320 Q 330 520 305 680" stroke="#15803d" stroke-width="12" stroke-linecap="round" fill="none" />
+  <path d="M 420 380 Q 360 540 320 680" stroke="#16a34a" stroke-width="10" stroke-linecap="round" fill="none" />
+
+  <!-- Graceful Broad Tulip Leaves -->
+  <path d="M 170 540 Q 110 400 140 340 Q 190 440 190 540 Z" fill="#22c55e" opacity="0.8" />
+  <path d="M 430 540 Q 490 400 460 340 Q 410 440 410 540 Z" fill="#16a34a" opacity="0.8" />
+
+  <!-- Left Tulip (Orange) -->
+  <g transform="translate(180, 360)">
+    <path d="M -25 30 C -35 0 -25 -40 0 -60 C 25 -40 35 0 25 30 Z" fill="url(#tulipOrange)" />
+    <path d="M -15 30 C -30 -10 -15 -45 0 -60 C 5 -30 5 0 -15 30 Z" fill="#f97316" />
+    <path d="M 15 30 C 30 -10 15 -45 0 -60 C -5 -30 -5 0 15 30 Z" fill="#ea580c" />
+  </g>
+
+  <!-- Mid-Left Tulip (Pink) -->
+  <g transform="translate(240, 300)">
+    <path d="M -28 35 C -40 0 -30 -45 0 -70 C 30 -45 40 0 28 35 Z" fill="url(#tulipPink)" />
+    <path d="M -18 35 C -35 -10 -20 -50 0 -70 C 5 -35 5 0 -18 35 Z" fill="#ec4899" />
+    <path d="M 18 35 C 35 -10 20 -50 0 -70 C -5 -35 -5 0 18 35 Z" fill="#be185d" />
+  </g>
+
+  <!-- Center Queen Tulip (Yellow/Golden) -->
+  <g transform="translate(300, 270)" filter="drop-shadow(0 8px 16px rgba(0,0,0,0.15))">
+    <path d="M -32 40 C -45 0 -35 -55 0 -80 C 35 -55 45 0 32 40 Z" fill="url(#tulipYellow)" />
+    <path d="M -20 40 C -40 -15 -25 -60 0 -80 C 8 -40 8 0 -20 40 Z" fill="#facc15" />
+    <path d="M 20 40 C 40 -15 25 -60 0 -80 C -8 -40 -8 0 20 40 Z" fill="#ca8a04" />
+  </g>
+
+  <!-- Mid-Right Tulip (Purple) -->
+  <g transform="translate(360, 300)">
+    <path d="M -28 35 C -40 0 -30 -45 0 -70 C 30 -45 40 0 28 35 Z" fill="url(#tulipPurple)" />
+    <path d="M -18 35 C -35 -10 -20 -50 0 -70 C 5 -35 5 0 -18 35 Z" fill="#a855f7" />
+    <path d="M 18 35 C 35 -10 20 -50 0 -70 C -5 -35 -5 0 18 35 Z" fill="#6b21a8" />
+  </g>
+
+  <!-- Right Tulip (Deep Rose) -->
+  <g transform="translate(420, 360)">
+    <path d="M -25 30 C -35 0 -25 -40 0 -60 C 25 -40 35 0 25 30 Z" fill="url(#tulipPink)" />
+    <path d="M -15 30 C -30 -10 -15 -45 0 -60 C 5 -30 5 0 -15 30 Z" fill="#f43f5e" />
+    <path d="M 15 30 C 30 -10 15 -45 0 -60 C -5 -30 -5 0 15 30 Z" fill="#e11d48" />
+  </g>
+
+  <!-- Raffia Tie -->
+  <g transform="translate(300, 580)">
+    <ellipse cx="0" cy="0" rx="40" ry="14" fill="#a855f7" />
+    <circle cx="0" cy="0" r="12" fill="#7e22ce" />
+    <path d="M -15 10 L -40 100" stroke="#a855f7" stroke-width="8" stroke-linecap="round" />
+    <path d="M 15 10 L 40 100" stroke="#a855f7" stroke-width="8" stroke-linecap="round" />
+  </g>
+
+  <rect x="180" y="675" width="240" height="40" rx="20" fill="rgba(255,255,255,0.85)" stroke="rgba(168,85,247,0.3)" />
+  <text x="300" y="700" fill="#6b21a8" font-family="Georgia, serif" font-size="14" font-weight="bold" letter-spacing="2" text-anchor="middle">AMSTERDAM TULIPS</text>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="100%" height="100%">
+  <rect width="300" height="300" fill="#fdf8f6" rx="20" />
+  <!-- Kraft Paper / Burlap wrap shape -->
+  <path d="M 90 60 L 210 60 L 175 240 L 125 240 Z" fill="#d4a373" stroke="#bc6c25" stroke-width="4" />
+  <!-- Twine string tie -->
+  <ellipse cx="150" cy="150" rx="35" ry="10" fill="#99582a" />
+  <circle cx="150" cy="150" r="8" fill="#6f1d1b" />
+  <path d="M 140 155 L 120 200" stroke="#99582a" stroke-width="4" stroke-linecap="round" />
+  <path d="M 160 155 L 180 200" stroke="#99582a" stroke-width="4" stroke-linecap="round" />
+  <text x="150" y="275" font-family="sans-serif" font-size="12" font-weight="bold" fill="#78350f" text-anchor="middle">Craft Wrap (No Vase)</text>
+</svg>

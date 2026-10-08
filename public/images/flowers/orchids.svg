@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgOrchid" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2e1065" />
+      <stop offset="50%" stop-color="#3b0764" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+    <radialGradient id="orchidPetal" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#f472b6" />
+      <stop offset="60%" stop-color="#c026d3" />
+      <stop offset="100%" stop-color="#86198f" />
+    </radialGradient>
+  </defs>
+
+  <rect width="600" height="750" fill="url(#bgOrchid)" />
+  <circle cx="300" cy="360" r="280" fill="rgba(192,38,211,0.2)" />
+
+  <!-- Cascading Orchid Spike Arches -->
+  <path d="M 280 560 Q 240 380 200 240 Q 180 180 150 160" stroke="#4c1d95" stroke-width="8" stroke-linecap="round" fill="none" />
+  <path d="M 320 560 Q 360 360 410 220 Q 430 160 460 140" stroke="#4c1d95" stroke-width="8" stroke-linecap="round" fill="none" />
+
+  <!-- Orchid Blossom 1 (Top Left) -->
+  <g transform="translate(180, 190) scale(0.65)">
+    <circle cx="0" cy="0" r="45" fill="url(#orchidPetal)" />
+    <ellipse cx="-45" cy="-20" rx="40" ry="25" transform="rotate(-30 -45 -20)" fill="url(#orchidPetal)" />
+    <ellipse cx="45" cy="-20" rx="40" ry="25" transform="rotate(30 45 -20)" fill="url(#orchidPetal)" />
+    <ellipse cx="0" cy="-45" rx="25" ry="40" fill="url(#orchidPetal)" />
+    <!-- Orchid Lip / Center -->
+    <path d="M -15 0 C -25 30 -10 45 0 45 C 10 45 25 30 15 0 Z" fill="#facc15" stroke="#a21caf" stroke-width="2" />
+  </g>
+
+  <!-- Orchid Blossom 2 (Mid Left) -->
+  <g transform="translate(220, 290) scale(0.85)">
+    <circle cx="0" cy="0" r="45" fill="url(#orchidPetal)" />
+    <ellipse cx="-45" cy="-20" rx="40" ry="25" transform="rotate(-30 -45 -20)" fill="url(#orchidPetal)" />
+    <ellipse cx="45" cy="-20" rx="40" ry="25" transform="rotate(30 45 -20)" fill="url(#orchidPetal)" />
+    <ellipse cx="0" cy="-45" rx="25" ry="40" fill="url(#orchidPetal)" />
+    <path d="M -15 0 C -25 30 -10 45 0 45 C 10 45 25 30 15 0 Z" fill="#facc15" stroke="#a21caf" stroke-width="2" />
+  </g>
+
+  <!-- Orchid Blossom 3 (Top Right) -->
+  <g transform="translate(430, 180) scale(0.7)">
+    <circle cx="0" cy="0" r="45" fill="url(#orchidPetal)" />
+    <ellipse cx="-45" cy="-20" rx="40" ry="25" transform="rotate(-30 -45 -20)" fill="url(#orchidPetal)" />
+    <ellipse cx="45" cy="-20" rx="40" ry="25" transform="rotate(30 45 -20)" fill="url(#orchidPetal)" />
+    <ellipse cx="0" cy="-45" rx="25" ry="40" fill="url(#orchidPetal)" />
+    <path d="M -15 0 C -25 30 -10 45 0 45 C 10 45 25 30 15 0 Z" fill="#facc15" stroke="#a21caf" stroke-width="2" />
+  </g>
+
+  <!-- Orchid Blossom 4 (Center Right Prime) -->
+  <g transform="translate(370, 310)" filter="drop-shadow(0 10px 20px rgba(0,0,0,0.5))">
+    <circle cx="0" cy="0" r="50" fill="url(#orchidPetal)" />
+    <ellipse cx="-55" cy="-25" rx="50" ry="32" transform="rotate(-30 -55 -25)" fill="url(#orchidPetal)" />
+    <ellipse cx="55" cy="-25" rx="50" ry="32" transform="rotate(30 55 -25)" fill="url(#orchidPetal)" />
+    <ellipse cx="0" cy="-55" rx="32" ry="50" fill="url(#orchidPetal)" />
+    <!-- Lower Petals -->
+    <ellipse cx="-30" cy="40" rx="28" ry="40" transform="rotate(20 -30 40)" fill="url(#orchidPetal)" />
+    <ellipse cx="30" cy="40" rx="28" ry="40" transform="rotate(-20 30 40)" fill="url(#orchidPetal)" />
+    <!-- Orchid Lip / Center Crown -->
+    <path d="M -20 0 C -35 40 -15 55 0 55 C 15 55 35 40 20 0 Z" fill="#facc15" stroke="#701a75" stroke-width="3" />
+    <circle cx="0" cy="5" r="8" fill="#e11d48" />
+  </g>
+
+  <!-- Minimalist Stone Vessel -->
+  <g transform="translate(300, 560)">
+    <path d="M -60 0 L -45 100 L 45 100 L 60 0 Z" fill="#475569" stroke="#334155" stroke-width="3" />
+    <ellipse cx="0" cy="0" rx="60" ry="14" fill="#64748b" />
+    <ellipse cx="0" cy="100" rx="45" ry="10" fill="#1e293b" />
+  </g>
+
+  <rect x="180" y="675" width="240" height="40" rx="20" fill="rgba(0,0,0,0.6)" stroke="rgba(255,255,255,0.2)" />
+  <text x="300" y="700" fill="#f472b6" font-family="Georgia, serif" font-size="14" font-weight="bold" letter-spacing="2" text-anchor="middle">ROYAL PHALAENOPSIS</text>
+</svg>

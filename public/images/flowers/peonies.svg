@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgPeony" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff1f2" />
+      <stop offset="50%" stop-color="#ffe4e6" />
+      <stop offset="100%" stop-color="#fbcfe8" />
+    </linearGradient>
+    <radialGradient id="peonyPetal1" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#fff5f5" />
+      <stop offset="60%" stop-color="#f472b6" />
+      <stop offset="100%" stop-color="#db2777" />
+    </radialGradient>
+    <radialGradient id="peonyCoral" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#ffedd5" />
+      <stop offset="50%" stop-color="#fb7185" />
+      <stop offset="100%" stop-color="#e11d48" />
+    </radialGradient>
+    <linearGradient id="sageLeaf" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#86efac" />
+      <stop offset="100%" stop-color="#166534" />
+    </linearGradient>
+  </defs>
+
+  <rect width="600" height="750" fill="url(#bgPeony)" />
+  <circle cx="300" cy="360" r="260" fill="rgba(255,255,255,0.7)" />
+
+  <!-- Sage Leaves -->
+  <g opacity="0.9">
+    <path d="M 160 480 Q 120 400 180 340 Q 220 420 160 480 Z" fill="url(#sageLeaf)" />
+    <path d="M 440 480 Q 480 400 420 340 Q 380 420 440 480 Z" fill="url(#sageLeaf)" />
+    <path d="M 230 240 Q 170 190 220 150 Q 270 200 230 240 Z" fill="url(#sageLeaf)" />
+    <path d="M 370 240 Q 430 190 380 150 Q 330 200 370 240 Z" fill="url(#sageLeaf)" />
+  </g>
+
+  <!-- Bouquet stems -->
+  <path d="M 270 440 Q 290 580 295 680" stroke="#15803d" stroke-width="12" stroke-linecap="round" fill="none" />
+  <path d="M 300 440 Q 300 580 300 680" stroke="#166534" stroke-width="14" stroke-linecap="round" fill="none" />
+  <path d="M 330 440 Q 310 580 305 680" stroke="#15803d" stroke-width="12" stroke-linecap="round" fill="none" />
+
+  <!-- Peony 1 (Left Coral) -->
+  <g transform="translate(200, 370)">
+    <circle cx="0" cy="0" r="85" fill="url(#peonyCoral)" />
+    <path d="M -50 -50 C -20 -90, 20 -90, 50 -50 C 90 -20, 90 20, 50 50 C 20 90, -20 90, -50 50 C -90 20, -90 -20, -50 -50 Z" fill="url(#peonyCoral)" opacity="0.9" />
+    <path d="M -30 -30 C -10 -60, 10 -60, 30 -30 C 60 -10, 60 10, 30 30 C 10 60, -10 60, -30 30 C -60 10, -60 -10, -30 -30 Z" fill="#ffe4e6" opacity="0.8" />
+    <circle cx="0" cy="0" r="18" fill="#fbbf24" opacity="0.9" />
+  </g>
+
+  <!-- Peony 2 (Right Coral Charm) -->
+  <g transform="translate(400, 370)">
+    <circle cx="0" cy="0" r="85" fill="url(#peonyCoral)" />
+    <path d="M -50 -50 C -20 -90, 20 -90, 50 -50 C 90 -20, 90 20, 50 50 C 20 90, -20 90, -50 50 C -90 20, -90 -20, -50 -50 Z" fill="url(#peonyCoral)" opacity="0.9" />
+    <path d="M -30 -30 C -10 -60, 10 -60, 30 -30 C 60 -10, 60 10, 30 30 C 10 60, -10 60, -30 30 C -60 10, -60 -10, -30 -30 Z" fill="#ffe4e6" opacity="0.8" />
+    <circle cx="0" cy="0" r="18" fill="#fbbf24" opacity="0.9" />
+  </g>
+
+  <!-- Peony 3 (Top Blush) -->
+  <g transform="translate(300, 250)">
+    <circle cx="0" cy="0" r="90" fill="url(#peonyPetal1)" />
+    <path d="M -60 -40 C -20 -95, 20 -95, 60 -40 C 95 -10, 95 30, 60 60 C 20 95, -20 95, -60 60 C -95 30, -95 -10, -60 -40 Z" fill="#fdf2f8" opacity="0.85" />
+    <circle cx="0" cy="0" r="22" fill="#f59e0b" opacity="0.8" />
+  </g>
+
+  <!-- Peony 4 (Center Foreground Giant) -->
+  <g transform="translate(300, 390)">
+    <circle cx="0" cy="0" r="105" fill="url(#peonyPetal1)" filter="drop-shadow(0 8px 16px rgba(0,0,0,0.15))" />
+    <path d="M -70 -50 C -25 -110, 25 -110, 70 -50 C 110 -15, 110 35, 70 70 C 25 110, -25 110, -70 70 C -110 35, -110 -15, -70 -50 Z" fill="#fff1f2" opacity="0.9" />
+    <path d="M -45 -35 C -15 -75, 15 -75, 45 -35 C 75 -10, 75 25, 45 45 C 15 75, -15 75, -45 45 C -75 25, -75 -10, -45 -35 Z" fill="#fb7185" opacity="0.75" />
+    <circle cx="0" cy="0" r="25" fill="#fef08a" />
+    <circle cx="0" cy="0" r="12" fill="#d97706" />
+  </g>
+
+  <!-- French Grosgrain Ribbon -->
+  <g transform="translate(300, 580)">
+    <rect x="-45" y="0" width="90" height="28" rx="6" fill="#f43f5e" />
+    <path d="M -15 28 L -45 110" stroke="#f43f5e" stroke-width="12" stroke-linecap="round" />
+    <path d="M 15 28 L 45 110" stroke="#f43f5e" stroke-width="12" stroke-linecap="round" />
+  </g>
+
+  <rect x="180" y="675" width="240" height="40" rx="20" fill="rgba(255,255,255,0.85)" stroke="rgba(244,63,94,0.3)" />
+  <text x="300" y="700" fill="#9d174d" font-family="Georgia, serif" font-size="14" font-weight="bold" letter-spacing="2" text-anchor="middle">PROVENCE PEONIES</text>
+</svg>
