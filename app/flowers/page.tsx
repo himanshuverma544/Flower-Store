@@ -9,9 +9,9 @@ import { PRODUCTS, OCCASIONS } from '@/lib/data';
 const FLOWER_TYPES: string[] = ['All', 'Roses', 'Peonies', 'Sunflowers', 'Lilies', 'Tulips', 'Orchids', 'Dried Bouquets'];
 const PRICE_RANGES = [
   { id: 'all', label: 'All Prices' },
-  { id: 'under-75', label: 'Under $75' },
-  { id: '75-100', label: '$75 to $100' },
-  { id: 'over-100', label: '$100 & Above' },
+  { id: 'under-1500', label: 'Under ₹1,500' },
+  { id: '1500-2000', label: '₹1,500 to ₹2,000' },
+  { id: 'over-2000', label: '₹2,000 & Above' },
 ];
 
 function FlowersCatalogContent() {
@@ -48,9 +48,9 @@ function FlowersCatalogContent() {
         if (!item.flowerType.toLowerCase().includes(selectedType.toLowerCase())) return false;
       }
 
-      if (selectedPriceRange === 'under-75' && item.price >= 75) return false;
-      if (selectedPriceRange === '75-100' && (item.price < 75 || item.price > 100)) return false;
-      if (selectedPriceRange === 'over-100' && item.price <= 100) return false;
+      if (selectedPriceRange === 'under-1500' && item.price >= 1500) return false;
+      if (selectedPriceRange === '1500-2000' && (item.price < 1500 || item.price > 2000)) return false;
+      if (selectedPriceRange === 'over-2000' && item.price <= 2000) return false;
 
       return true;
     }).sort((a, b) => {

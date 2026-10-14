@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { X, Trash2, Plus, Minus, ArrowRight, Tag, Gift, CheckCircle2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { formatINR, FREE_SHIPPING_THRESHOLD } from '@/lib/currency';
 
 export default function CartDrawer() {
   const {
@@ -32,7 +33,7 @@ export default function CartDrawer() {
     applyCoupon(inputCode);
   };
 
-  const freeShippingThreshold = 150;
+  const freeShippingThreshold = FREE_SHIPPING_THRESHOLD;
   const freeShippingProgress = Math.min(100, (subtotal / freeShippingThreshold) * 100);
   const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
 
@@ -67,7 +68,7 @@ export default function CartDrawer() {
             <div className="flex items-center justify-between text-xs font-medium text-rose-950 mb-1.5">
               <span>
                 {remainingForFreeShipping > 0
-                  ? `Add $${remainingForFreeShipping.toFixed(2)} more for FREE Delivery`
+                  ? `Add ${formatINR(remainingForFreeShipping)} more for FREE Delivery`
                   : '🎉 You have unlocked Free White-Glove Delivery!'}
               </span>
               <span className="font-bold">{Math.round(freeShippingProgress)}%</span>
@@ -169,12 +170,12 @@ export default function CartDrawer() {
                       </div>
 
                       <div className="text-sm font-bold text-stone-900 font-serif">
-                        ${(
+                        {formatINR(
                           ((item.selectedSize?.price || item.price) +
                             (item.selectedVase?.price || 0) +
                             (item.addons || []).reduce((a, b) => a + b.price, 0)) *
                           item.quantity
-                        ).toFixed(2)}
+                        )}
                       </div>
                     </div>
                   </div>
@@ -212,7 +213,7 @@ export default function CartDrawer() {
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                     Coupon <strong className="font-bold">{couponCode}</strong> applied
                   </span>
-                  <span>-${discountAmount.toFixed(2)}</span>
+                  <span>-{formatINR(discountAmount)}</span>
                 </div>
               )}
               {couponError && <p className="text-xs text-rose-600">{couponError}</p>}
@@ -221,23 +222,23 @@ export default function CartDrawer() {
               <div className="space-y-1.5 text-xs text-stone-600 pt-2 border-t border-stone-100">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="font-semibold text-stone-800">${subtotal.toFixed(2)}</span>
+                  <span className="font-semibold text-stone-800">{formatINR(subtotal)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-700">
                     <span>Discount</span>
-                    <span>-${discountAmount.toFixed(2)}</span>
+                    <span>-{formatINR(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span>Delivery ({subtotal > 150 ? 'Free Shipping' : 'Standard Courier'})</span>
+                  <span>Delivery ({subtotal > FREE_SHIPPING_THRESHOLD ? 'Free Shipping' : 'Standard Courier'})</span>
                   <span className="font-semibold text-stone-800">
-                    {shippingFee === 0 ? 'FREE' : `$${shippingFee.toFixed(2)}`}
+                    {shippingFee === 0 ? 'FREE' : formatINR(shippingFee)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-stone-900 pt-2 border-t border-stone-200">
                   <span className="font-serif">Estimated Total</span>
-                  <span className="font-serif text-base">${total.toFixed(2)}</span>
+                  <span className="font-serif text-base">{formatINR(total)}</span>
                 </div>
               </div>
 

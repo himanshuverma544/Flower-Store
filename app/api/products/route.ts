@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { Product } from '@/types';
 
+// Always run on request — never pre-render at build time (needs the database).
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // ---- Helpers ----------------------------------------------------------------
 
 function deserializeProduct(p: {

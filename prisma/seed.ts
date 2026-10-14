@@ -16,7 +16,7 @@ async function main() {
   const coupons = [
     { code: 'SPRING20', description: '20% Off Spring Blooms', discountPercent: 20 },
     { code: 'FREEDELIVERY', description: 'Complimentary Express Delivery', freeShipping: true },
-    { code: 'BLOOM10', description: '$10 Off Any Bouquet', flatDiscount: 10 },
+    { code: 'BLOOM10', description: '₹200 Off Any Bouquet', flatDiscount: 200 },
     { code: 'BLOOM15', description: '15% Off Bloom Club', discountPercent: 15 },
   ];
 

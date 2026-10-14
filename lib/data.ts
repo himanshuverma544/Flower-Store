@@ -31,16 +31,16 @@ export const OCCASIONS: string[] = [
 
 export const VASE_OPTIONS: VaseOption[] = [
   { id: 'no-vase', name: 'Wrapped in Craft Burlap & Ribbon (No Vase)', price: 0, image: '/images/vases/burlap.svg' },
-  { id: 'fluted-glass', name: 'Fluted Crystal Glass Vase', price: 16, image: '/images/vases/glass.svg' },
-  { id: 'sculpted-ceramic', name: 'Matte Cream Sculpted Ceramic Vase', price: 24, image: '/images/vases/ceramic.svg' },
-  { id: 'brass-urn', name: 'Heritage Antique Brass Vase', price: 34, image: '/images/vases/brass.svg' },
+  { id: 'fluted-glass', name: 'Fluted Crystal Glass Vase', price: 349, image: '/images/vases/glass.svg' },
+  { id: 'sculpted-ceramic', name: 'Matte Cream Sculpted Ceramic Vase', price: 499, image: '/images/vases/ceramic.svg' },
+  { id: 'brass-urn', name: 'Heritage Antique Brass Vase', price: 699, image: '/images/vases/brass.svg' },
 ];
 
 export const GIFT_ADDONS: GiftAddon[] = [
-  { id: 'chocolates', name: 'Swiss Artisan Praline Box (8 pcs)', price: 14, icon: 'Cookie' },
-  { id: 'candle', name: 'Wild Fig & Vanilla Soy Candle', price: 18, icon: 'Flame' },
-  { id: 'plush-bear', name: 'Plush Velvet Keepsake Bear', price: 12, icon: 'Smile' },
-  { id: 'plant-food', name: 'Organic Floral Nutrition Elixir', price: 6, icon: 'Droplets' },
+  { id: 'chocolates', name: 'Swiss Artisan Praline Box (8 pcs)', price: 299, icon: 'Cookie' },
+  { id: 'candle', name: 'Wild Fig & Vanilla Soy Candle', price: 349, icon: 'Flame' },
+  { id: 'plush-bear', name: 'Plush Velvet Keepsake Bear', price: 249, icon: 'Smile' },
+  { id: 'plant-food', name: 'Organic Floral Nutrition Elixir', price: 129, icon: 'Droplets' },
 ];
 
 export const CARD_TEMPLATES: CardTemplate[] = [
@@ -56,8 +56,8 @@ export const PRODUCTS: Product[] = [
     slug: 'velvet-scarlet-grand-roses',
     name: 'Velvet Scarlet Grand Roses',
     tagline: 'Deep crimson Ecuadorian long-stem roses hand-tied with Italian ruscus',
-    price: 89,
-    originalPrice: 109,
+    price: 1799,
+    originalPrice: 2199,
     category: 'romance',
     occasion: ['Romance', 'Anniversary'],
     flowerType: 'Roses',
@@ -79,9 +79,9 @@ export const PRODUCTS: Product[] = [
       'Replenish fresh water every 48 hours for up to 10 days of vibrant bloom.'
     ],
     sizes: [
-      { name: 'Standard (12 Stems)', price: 89, multiplier: 1 },
-      { name: 'Deluxe (18 Stems)', price: 119, multiplier: 1.34 },
-      { name: 'Grand Luxe (24 Stems)', price: 149, multiplier: 1.68 }
+      { name: 'Standard (12 Stems)', price: 1799, multiplier: 1 },
+      { name: 'Deluxe (18 Stems)', price: 2399, multiplier: 1.34 },
+      { name: 'Grand Luxe (24 Stems)', price: 2999, multiplier: 1.68 }
     ]
   },
   {
@@ -89,8 +89,8 @@ export const PRODUCTS: Product[] = [
     slug: 'provence-peach-peonies',
     name: 'Provence Peach Peony Whisper',
     tagline: 'Cloud-soft coral charm peonies paired with garden white ranunculus',
-    price: 98,
-    originalPrice: 120,
+    price: 1999,
+    originalPrice: 2499,
     category: 'luxury',
     occasion: ['Birthday', 'Anniversary', 'Congratulations'],
     flowerType: 'Peonies',
@@ -112,9 +112,9 @@ export const PRODUCTS: Product[] = [
       'Give blooms room to unfurl naturally over 3-4 days.'
     ],
     sizes: [
-      { name: 'Standard (10 Peonies + Fillers)', price: 98, multiplier: 1 },
-      { name: 'Deluxe (15 Peonies + Fillers)', price: 135, multiplier: 1.38 },
-      { name: 'Grand Luxe (20 Peonies + Luxe Vase)', price: 175, multiplier: 1.78 }
+      { name: 'Standard (10 Peonies + Fillers)', price: 1999, multiplier: 1 },
+      { name: 'Deluxe (15 Peonies + Fillers)', price: 2699, multiplier: 1.38 },
+      { name: 'Grand Luxe (20 Peonies + Luxe Vase)', price: 3499, multiplier: 1.78 }
     ]
   },
   {
@@ -122,8 +122,8 @@ export const PRODUCTS: Product[] = [
     slug: 'sunlit-tuscany-meadow',
     name: 'Sunlit Tuscany Meadow',
     tagline: 'Radiant golden sunflowers, chamomile daisies, and golden solidago',
-    price: 64,
-    originalPrice: 75,
+    price: 1299,
+    originalPrice: 1499,
     category: 'birthday',
     occasion: ['Birthday', 'Thank You', 'Just Because'],
     flowerType: 'Sunflowers',
@@ -145,9 +145,9 @@ export const PRODUCTS: Product[] = [
       'Mist lightly in the mornings for dewy freshness.'
     ],
     sizes: [
-      { name: 'Standard Bouquet', price: 64, multiplier: 1 },
-      { name: 'Deluxe (Adds Garden Chamomile & Lilies)', price: 89, multiplier: 1.39 },
-      { name: 'Grand Luxe Feast', price: 115, multiplier: 1.8 }
+      { name: 'Standard Bouquet', price: 1299, multiplier: 1 },
+      { name: 'Deluxe (Adds Garden Chamomile & Lilies)', price: 1799, multiplier: 1.39 },
+      { name: 'Grand Luxe Feast', price: 2299, multiplier: 1.8 }
     ]
   },
   {
@@ -155,8 +155,8 @@ export const PRODUCTS: Product[] = [
     slug: 'celestial-white-lily-symphony',
     name: 'Celestial Lily & Orchid Symphony',
     tagline: 'Fragrant Casablanca oriental lilies, white cymbidium orchids & snapdragons',
-    price: 94,
-    originalPrice: 110,
+    price: 1899,
+    originalPrice: 2199,
     category: 'sympathy',
     occasion: ['Sympathy', 'Anniversary', 'Thank You'],
     flowerType: 'Lilies',
@@ -178,9 +178,9 @@ export const PRODUCTS: Product[] = [
       'Keep away from curious household pets.'
     ],
     sizes: [
-      { name: 'Standard Serenity', price: 94, multiplier: 1 },
-      { name: 'Deluxe Majesty', price: 125, multiplier: 1.33 },
-      { name: 'Grand Luxe Memorial Stand', price: 165, multiplier: 1.75 }
+      { name: 'Standard Serenity', price: 1899, multiplier: 1 },
+      { name: 'Deluxe Majesty', price: 2499, multiplier: 1.33 },
+      { name: 'Grand Luxe Memorial Stand', price: 3299, multiplier: 1.75 }
     ]
   },
   {
@@ -188,8 +188,8 @@ export const PRODUCTS: Product[] = [
     slug: 'amsterdam-dawn-pastel-tulips',
     name: 'Amsterdam Dawn Pastel Tulips',
     tagline: 'A vibrant kaleidoscope of Dutch fringed, parrot, and double-petal tulips',
-    price: 68,
-    originalPrice: 80,
+    price: 1399,
+    originalPrice: 1599,
     category: 'birthday',
     occasion: ['Birthday', 'Congratulations', 'Just Because'],
     flowerType: 'Tulips',
@@ -211,9 +211,9 @@ export const PRODUCTS: Product[] = [
       'Stems will grow 1-2 inches inside the vase.'
     ],
     sizes: [
-      { name: 'Standard (20 Stems)', price: 68, multiplier: 1 },
-      { name: 'Deluxe (30 Stems)', price: 88, multiplier: 1.29 },
-      { name: 'Grand Luxe (45 Stems)', price: 118, multiplier: 1.73 }
+      { name: 'Standard (20 Stems)', price: 1399, multiplier: 1 },
+      { name: 'Deluxe (30 Stems)', price: 1799, multiplier: 1.29 },
+      { name: 'Grand Luxe (45 Stems)', price: 2399, multiplier: 1.73 }
     ]
   },
   {
@@ -221,8 +221,8 @@ export const PRODUCTS: Product[] = [
     slug: 'boho-golden-dune-everlasting',
     name: 'Boho Golden Dune Everlasting',
     tagline: 'Naturally dried pampas plumes, sun-bleached palms & preserved lavender',
-    price: 79,
-    originalPrice: 92,
+    price: 1599,
+    originalPrice: 1899,
     category: 'dried',
     occasion: ['Congratulations', 'Thank You', 'Just Because'],
     flowerType: 'Dried Bouquets',
@@ -244,8 +244,8 @@ export const PRODUCTS: Product[] = [
       'Lightly blow-dry on cool/low speed once a month to remove dust.'
     ],
     sizes: [
-      { name: 'Standard Arrangement', price: 79, multiplier: 1 },
-      { name: 'Deluxe Ceramic Pot Ensemble', price: 109, multiplier: 1.38 }
+      { name: 'Standard Arrangement', price: 1599, multiplier: 1 },
+      { name: 'Deluxe Ceramic Pot Ensemble', price: 2199, multiplier: 1.38 }
     ]
   },
   {
@@ -253,8 +253,8 @@ export const PRODUCTS: Product[] = [
     slug: 'royal-magenta-phalaenopsis-orchid',
     name: 'Royal Magenta Phalaenopsis Orchid',
     tagline: 'Living double-spike cascade orchid in a handcrafted textured stone vessel',
-    price: 110,
-    originalPrice: 135,
+    price: 2199,
+    originalPrice: 2699,
     category: 'luxury',
     occasion: ['Anniversary', 'Congratulations', 'Thank You'],
     flowerType: 'Orchids',
@@ -276,8 +276,8 @@ export const PRODUCTS: Product[] = [
       'Do not allow roots to stand in stagnant drainage water.'
     ],
     sizes: [
-      { name: 'Double Stem in Clay Pot', price: 110, multiplier: 1 },
-      { name: 'Triple Stem in Artisanal Vessel', price: 155, multiplier: 1.41 }
+      { name: 'Double Stem in Clay Pot', price: 2199, multiplier: 1 },
+      { name: 'Triple Stem in Artisanal Vessel', price: 3099, multiplier: 1.41 }
     ]
   },
   {
@@ -285,8 +285,8 @@ export const PRODUCTS: Product[] = [
     slug: 'enchanted-english-garden',
     name: 'Enchanted English Garden Romance',
     tagline: 'David Austin garden roses, lilac delphinium, blush sweet peas & herbs',
-    price: 105,
-    originalPrice: 125,
+    price: 2099,
+    originalPrice: 2499,
     category: 'romance',
     occasion: ['Romance', 'Birthday', 'Anniversary'],
     flowerType: 'Garden Roses',
@@ -308,9 +308,9 @@ export const PRODUCTS: Product[] = [
       'Mist gently on warm afternoons.'
     ],
     sizes: [
-      { name: 'Standard (16 Stems)', price: 105, multiplier: 1 },
-      { name: 'Deluxe (24 Stems)', price: 139, multiplier: 1.32 },
-      { name: 'Grand Luxe (32 Stems + Vintage Vase)', price: 189, multiplier: 1.8 }
+      { name: 'Standard (16 Stems)', price: 2099, multiplier: 1 },
+      { name: 'Deluxe (24 Stems)', price: 2799, multiplier: 1.32 },
+      { name: 'Grand Luxe (32 Stems + Vintage Vase)', price: 3799, multiplier: 1.8 }
     ]
   }
 ];

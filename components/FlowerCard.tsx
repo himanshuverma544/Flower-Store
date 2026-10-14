@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Star, Sparkles } from 'lucide-react';
 import { Product } from '@/types';
+import { formatINR } from '@/lib/currency';
 
 interface FlowerCardProps {
   flower: Product;
@@ -38,7 +39,7 @@ export default function FlowerCard({ flower }: FlowerCardProps) {
           )}
           {flower.originalPrice > flower.price && (
             <span className="bg-amber-600/90 backdrop-blur-sm text-white text-[11px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
-              Save ${flower.originalPrice - flower.price}
+              Save {formatINR(flower.originalPrice - flower.price)}
             </span>
           )}
         </div>
@@ -81,11 +82,11 @@ export default function FlowerCard({ flower }: FlowerCardProps) {
             <div className="text-xs text-stone-400 font-medium">Starts from</div>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-stone-900 font-serif">
-                ${flower.price}
+                {formatINR(flower.price)}
               </span>
               {flower.originalPrice > flower.price && (
                 <span className="text-xs text-stone-400 line-through">
-                  ${flower.originalPrice}
+                  {formatINR(flower.originalPrice)}
                 </span>
               )}
             </div>

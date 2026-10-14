@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { PRODUCTS, VASE_OPTIONS, GIFT_ADDONS, CARD_TEMPLATES } from '@/lib/data';
 import { useCart } from '@/context/CartContext';
+import { formatINR } from '@/lib/currency';
 import { FlowerSize, VaseOption, GiftAddon, CardTemplate } from '@/types';
 
 export default function FlowerDetailPage() {
@@ -198,7 +199,7 @@ export default function FlowerDetailPage() {
             <div>
               <span className="text-xs text-stone-500 font-medium">Arrangement Total:</span>
               <div className="text-2xl font-serif font-bold text-stone-900">
-                ${calculatedPrice.toFixed(2)}
+                {formatINR(calculatedPrice)}
               </div>
             </div>
             <div className="text-right">
@@ -228,7 +229,7 @@ export default function FlowerDetailPage() {
                 >
                   <div className="text-xs font-semibold text-stone-900">{sz.name}</div>
                   <div className="text-sm font-bold text-stone-800 font-serif mt-1">
-                    ${sz.price}
+                    {formatINR(sz.price)}
                   </div>
                   {selectedSize.name === sz.name && (
                     <div className="absolute top-3 right-3 text-rose-700">
@@ -265,7 +266,7 @@ export default function FlowerDetailPage() {
                       {vase.name}
                     </div>
                     <div className="text-xs text-stone-500 font-medium">
-                      {vase.price === 0 ? 'Included (Complimentary)' : `+$${vase.price}`}
+                      {vase.price === 0 ? 'Included (Complimentary)' : `+${formatINR(vase.price)}`}
                     </div>
                   </div>
                   {selectedVase.id === vase.id && (
@@ -303,7 +304,7 @@ export default function FlowerDetailPage() {
                       <div className="text-[11px] font-semibold text-stone-900 leading-tight">
                         {addon.name}
                       </div>
-                      <div className="text-xs font-bold text-stone-700 mt-1">+${addon.price}</div>
+                      <div className="text-xs font-bold text-stone-700 mt-1">+{formatINR(addon.price)}</div>
                     </div>
                   </button>
                 );
@@ -460,7 +461,7 @@ export default function FlowerDetailPage() {
               className="w-full py-4 bg-rose-700 hover:bg-rose-800 text-white font-semibold text-sm rounded-2xl shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-2"
             >
               <Gift className="w-5 h-5" />
-              <span>Add Handcrafted Bouquet to Bag — ${calculatedPrice.toFixed(2)}</span>
+              <span>Add Handcrafted Bouquet to Bag — {formatINR(calculatedPrice)}</span>
             </button>
 
             {addedSuccess && (

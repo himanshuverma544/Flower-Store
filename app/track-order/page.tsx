@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Order } from '@/types';
+import { formatINR } from '@/lib/currency';
 
 const MOCK_DEMO_ORDER: Order = {
   id: 'FLX-829104',
@@ -49,14 +50,14 @@ const MOCK_DEMO_ORDER: Order = {
       cartItemId: 1,
       slug: 'velvet-scarlet-grand-roses',
       name: 'Velvet Scarlet Grand Roses',
-      selectedSize: { name: 'Deluxe (18 Stems)', price: 119, multiplier: 1.34 },
-      selectedVase: { id: 'fluted-glass', name: 'Fluted Crystal Glass Vase', price: 16, image: '/images/vases/glass.svg' },
+      selectedSize: { name: 'Deluxe (18 Stems)', price: 2399, multiplier: 1.34 },
+      selectedVase: { id: 'fluted-glass', name: 'Fluted Crystal Glass Vase', price: 349, image: '/images/vases/glass.svg' },
       image: '/images/flowers/roses.svg',
-      price: 119,
+      price: 2399,
       quantity: 1,
     },
   ],
-  total: 135.0,
+  total: 2748,
 };
 
 function TrackOrderContent() {
@@ -305,7 +306,7 @@ function TrackOrderContent() {
               <div className="pt-2 text-right text-xs text-stone-500">
                 Total Paid:{' '}
                 <strong className="text-stone-900 font-serif text-sm">
-                  ${(activeOrder.total || 0).toFixed(2)}
+                  {formatINR(activeOrder.total || 0)}
                 </strong>
               </div>
             </div>

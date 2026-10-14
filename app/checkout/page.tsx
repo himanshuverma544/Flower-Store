@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '@/context/CartContext';
+import { formatINR } from '@/lib/currency';
 import { RecipientInfo, SenderInfo, Order } from '@/types';
 
 export default function CheckoutPage() {
@@ -211,7 +212,7 @@ export default function CheckoutPage() {
             <div className="flex justify-between pt-1">
               <span className="text-stone-500 font-medium">Total Billed:</span>
               <span className="font-bold text-stone-900 font-serif text-sm">
-                ${placedOrder.total.toFixed(2)}
+                {formatINR(placedOrder.total)}
               </span>
             </div>
           </div>
@@ -497,7 +498,7 @@ export default function CheckoutPage() {
                   ) : (
                     <>
                       <Lock className="w-4 h-4" />
-                      <span>Place Flower Order — ${total.toFixed(2)}</span>
+                      <span>Place Flower Order — {formatINR(total)}</span>
                     </>
                   )}
                 </button>
@@ -532,12 +533,12 @@ export default function CheckoutPage() {
                       )}
                     </div>
                     <div className="font-serif font-bold text-stone-900">
-                      ${(
+                      {formatINR(
                         ((item.selectedSize?.price || item.price) +
                           (item.selectedVase?.price || 0) +
                           (item.addons || []).reduce((a, b) => a + b.price, 0)) *
                         item.quantity
-                      ).toFixed(2)}
+                      )}
                     </div>
                   </div>
                 ))}
@@ -546,23 +547,23 @@ export default function CheckoutPage() {
               <div className="space-y-2 text-xs text-stone-600 pt-2 border-t border-stone-100">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="font-semibold text-stone-800">${subtotal.toFixed(2)}</span>
+                  <span className="font-semibold text-stone-800">{formatINR(subtotal)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-700 font-medium">
                     <span>Discount ({couponCode})</span>
-                    <span>-${discountAmount.toFixed(2)}</span>
+                    <span>-{formatINR(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span>Hand Delivery</span>
                   <span className="font-semibold text-stone-800">
-                    {shippingFee === 0 ? 'FREE' : `$${shippingFee.toFixed(2)}`}
+                    {shippingFee === 0 ? 'FREE' : formatINR(shippingFee)}
                   </span>
                 </div>
                 <div className="flex justify-between text-base font-serif font-bold text-stone-900 pt-3 border-t border-stone-200">
                   <span>Total Amount</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>{formatINR(total)}</span>
                 </div>
               </div>
             </div>

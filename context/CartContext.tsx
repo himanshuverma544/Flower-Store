@@ -2,6 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { CartItem } from '@/types';
+import {
+  BLOOM10_FLAT_DISCOUNT,
+  FREE_SHIPPING_THRESHOLD,
+  STANDARD_SHIPPING_FEE,
+  formatINR,
+} from '@/lib/currency';
 
 interface CouponResult {
   success: boolean;
@@ -34,7 +40,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [couponCode, setCouponCode] = useState<string>('');
   const [discount, setDiscount] = useState<number>(0);
   const [couponError, setCouponError] = useState<string>('');
-  const [shippingFee, setShippingFee] = useState<number>(12);
+  const [shippingFee, setShippingFee] = useState<number>(STANDARD_SHIPPING_FEE);
 
   // Load cart from localStorage
   useEffect(() => {
@@ -117,10 +123,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setCouponCode('FREEDELIVERY');
       return { success: true, message: 'Free Express Delivery applied!' };
     } else if (clean === 'BLOOM10') {
-      setDiscount(10);
+      setDiscount(BLOOM10_FLAT_DISCOUNT);
       setCouponError('');
       setCouponCode('BLOOM10');
-      return { success: true, message: '$10 off applied to your bouquet!' };
+      return {
+        success: true,
+        message: `${formatINR(BLOOM10_FLAT_DISCOUNT)} off applied to your bouquet!`,
+      };
     } else {
       setCouponError('Invalid promo code. Try "SPRING20" or "FREEDELIVERY"');
       return { success: false, message: 'Invalid coupon' };
@@ -137,7 +146,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const discountAmount =
     discount > 1 ? discount : Math.round(subtotal * discount * 100) / 100;
 
-  const currentShipping = subtotal > 150 ? 0 : shippingFee;
+  const currentShipping = subtotal > FREE_SHIPPING_THRESHOLD ? 0 : shippingFee;
   const total = Math.max(0, subtotal - discountAmount + currentShipping);
   const totalItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 

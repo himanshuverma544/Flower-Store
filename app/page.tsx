@@ -253,7 +253,7 @@ export default function HomePage() {
         <div className="bg-rose-950 text-white rounded-3xl p-8 sm:p-12 lg:p-16 relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">
             <span className="text-xs uppercase tracking-widest text-rose-300 font-bold">Heartfelt Words</span>
-            <h2 className="text-2xl sm:text-4xl font-serif font-bold mt-2">
+            <h2 className="text-2xl sm:text-4xl text-white font-serif font-bold mt-2">
               Loved by Over 12,000 Recipients Nationwide
             </h2>
           </div>

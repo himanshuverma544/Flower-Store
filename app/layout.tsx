@@ -58,8 +58,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     image: 'https://floralux-boutique.com/images/flowers/roses.svg',
     description:
       'Luxury florist delivering fresh cut flowers, Ecuadorian roses, and bespoke arrangements with same-day delivery.',
-    priceRange: '$$',
-    currenciesAccepted: 'USD',
+    priceRange: '₹₹',
+    currenciesAccepted: 'INR',
     paymentAccepted: 'Credit Card, Apple Pay, Google Pay',
     openingHoursSpecification: [
       {
