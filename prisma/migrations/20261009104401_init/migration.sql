@@ -1,8 +1,8 @@
 -- CreateTable
 CREATE TABLE "orders" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "date" TEXT NOT NULL,
-    "total" REAL NOT NULL,
+    "total" DOUBLE PRECISION NOT NULL,
     "status" TEXT NOT NULL,
     "currentStep" INTEGER NOT NULL DEFAULT 1,
     "estimatedDelivery" TEXT NOT NULL DEFAULT 'Tomorrow',
@@ -23,21 +23,23 @@ CREATE TABLE "orders" (
     "deliveryDate" TEXT NOT NULL DEFAULT '',
     "deliverySlot" TEXT NOT NULL DEFAULT '',
     "itemsJson" TEXT NOT NULL DEFAULT '[]',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "orders_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "products" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "tagline" TEXT NOT NULL,
-    "price" REAL NOT NULL,
-    "originalPrice" REAL NOT NULL,
+    "price" DOUBLE PRECISION NOT NULL,
+    "originalPrice" DOUBLE PRECISION NOT NULL,
     "category" TEXT NOT NULL,
     "flowerType" TEXT NOT NULL,
     "stemCount" INTEGER NOT NULL,
-    "rating" REAL NOT NULL,
+    "rating" DOUBLE PRECISION NOT NULL,
     "reviewCount" INTEGER NOT NULL,
     "isBestseller" BOOLEAN NOT NULL DEFAULT false,
     "isNew" BOOLEAN NOT NULL DEFAULT false,
@@ -48,18 +50,22 @@ CREATE TABLE "products" (
     "galleryJson" TEXT NOT NULL DEFAULT '[]',
     "careTipsJson" TEXT NOT NULL DEFAULT '[]',
     "sizesJson" TEXT NOT NULL DEFAULT '[]',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "products_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "coupons" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "discountPercent" INTEGER,
-    "flatDiscount" REAL,
+    "flatDiscount" DOUBLE PRECISION,
     "freeShipping" BOOLEAN NOT NULL DEFAULT false,
-    "isActive" BOOLEAN NOT NULL DEFAULT true
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "coupons_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex

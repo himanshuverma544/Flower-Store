@@ -1,13 +1,11 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL_POOLED")
+  directUrl = env("DATABASE_URL")
 }
 
 model Order {
@@ -40,7 +38,7 @@ model Order {
   deliveryDate     String   @default("")
   deliverySlot     String   @default("")
 
-  // Items stored as JSON
+  // Items stored as JSON string
   itemsJson        String   @default("[]")
 
   createdAt        DateTime @default(now())
@@ -49,42 +47,42 @@ model Order {
 }
 
 model Product {
-  id           String   @id
-  slug         String   @unique
-  name         String
-  tagline      String
-  price        Float
+  id            String   @id
+  slug          String   @unique
+  name          String
+  tagline       String
+  price         Float
   originalPrice Float
-  category     String
-  flowerType   String
-  stemCount    Int
-  rating       Float
-  reviewCount  Int
-  isBestseller Boolean  @default(false)
-  isNew        Boolean  @default(false)
-  image        String
-  symbolism    String
-  description  String
+  category      String
+  flowerType    String
+  stemCount     Int
+  rating        Float
+  reviewCount   Int
+  isBestseller  Boolean  @default(false)
+  isNew         Boolean  @default(false)
+  image         String
+  symbolism     String
+  description   String
 
-  // JSON arrays
-  occasionJson  String @default("[]")
-  galleryJson   String @default("[]")
-  careTipsJson  String @default("[]")
-  sizesJson     String @default("[]")
+  // JSON arrays stored as strings
+  occasionJson  String   @default("[]")
+  galleryJson   String   @default("[]")
+  careTipsJson  String   @default("[]")
+  sizesJson     String   @default("[]")
 
-  createdAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   @@map("products")
 }
 
 model Coupon {
-  id              String  @id @default(cuid())
-  code            String  @unique
+  id              String   @id @default(cuid())
+  code            String   @unique
   description     String
   discountPercent Int?
   flatDiscount    Float?
-  freeShipping    Boolean @default(false)
-  isActive        Boolean @default(true)
+  freeShipping    Boolean  @default(false)
+  isActive        Boolean  @default(true)
 
   @@map("coupons")
 }
