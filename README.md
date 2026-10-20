@@ -79,3 +79,56 @@ npm start
 ```
 
 Visit [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 💳 Razorpay Payment Verification & Webhooks (Stage 2C)
+
+### 1. Server-Side Verification Endpoint
+- **Route:** `POST /api/payments/verify`
+- **Method:** `POST`
+- **Payload:**
+  ```json
+  {
+    "orderId": "FLX-123456",
+    "razorpayOrderId": "order_XXXXX",
+    "razorpayPaymentId": "pay_YYYYY",
+    "razorpaySignature": "computed_hmac_hex",
+    "trackingToken": "unguessable_secure_token"
+  }
+  ```
+- **Security & Authorization:**
+  - Verifies HMAC SHA256 signature using `RAZORPAY_KEY_SECRET`.
+  - Enforces server-authoritative Razorpay order ID (never trusts client-supplied order ID).
+  - Fetches payment details from Razorpay to verify capture status (`captured`), amount (paise), and currency (`INR`).
+  - Idempotent: duplicate calls with the same payment ID return verified state safely without re-processing.
+  - Conflicting payment IDs attempting to overwrite an already-verified order are rejected with `409 Conflict`.
+  - Atomically commits coupon reservations via `commitCouponAtomically`.
+
+### 2. Razorpay Webhook Configuration
+- **Endpoint URL:** `https://<your-deployed-domain>/api/webhooks/razorpay` (or ngrok/tunnel URL for local webhook testing).
+- **Header:** `X-Razorpay-Signature`
+- **Environment Variable:** `RAZORPAY_WEBHOOK_SECRET`
+  > [!IMPORTANT]
+  > The webhook secret is a **separate secret** generated when adding a webhook endpoint in the Razorpay Dashboard.
+  > Never use `RAZORPAY_KEY_SECRET` in place of `RAZORPAY_WEBHOOK_SECRET`.
+- **Supported Events:**
+  - `payment.captured` — Transitions order to `'Order Received & Verified'` and commits coupon reservation.
+  - `order.paid` — Transitions order to `'Order Received & Verified'` and commits coupon reservation.
+  - `payment.failed` — Transitions `'Payment Pending'` order to `'Payment Failed'` and releases reserved coupon. If an order was already confirmed/paid, a delayed failure event is ignored to prevent downgrade.
+- **Deduplication:**
+  - Every event is deduplicated atomically in `payload.payload_kv` under `webhook_event:<eventId>`.
+
+#### Razorpay Dashboard Setup Steps:
+1. Log in to your [Razorpay Dashboard](https://dashboard.razorpay.com/) (ensure **Test Mode** is toggled for development).
+2. Navigate to **Account & Settings** → **Webhooks** → **Add New Webhook**.
+3. Set **Webhook URL** to `https://<your-domain>/api/webhooks/razorpay`.
+4. Enter a strong, random string in the **Secret** field and save this as `RAZORPAY_WEBHOOK_SECRET` in your `.env`.
+5. Select the following **Active Events**:
+   - `payment.captured`
+   - `order.paid`
+   - `payment.failed`
+6. Click **Create Webhook**.
+
+> [!NOTE]
+> **Checkout Credential Status:** The Checkout modal's API key expiration is currently under investigation with Razorpay Support. Server-side payment verification and webhook processing are implemented and tested independently with cryptographic fixtures and mock suites.

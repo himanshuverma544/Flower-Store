@@ -4,9 +4,20 @@ import React, { useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Filter, Search, RotateCcw, Sparkles } from 'lucide-react';
 import FlowerCard from '@/components/FlowerCard';
-import { PRODUCTS, OCCASIONS } from '@/lib/data';
+import { Product } from '@/types';
+import { OCCASIONS as DEFAULT_OCCASIONS } from '@/lib/data';
 
-const FLOWER_TYPES: string[] = ['All', 'Roses', 'Peonies', 'Sunflowers', 'Lilies', 'Tulips', 'Orchids', 'Dried Bouquets'];
+const FLOWER_TYPES: string[] = [
+  'All',
+  'Roses',
+  'Peonies',
+  'Sunflowers',
+  'Lilies',
+  'Tulips',
+  'Orchids',
+  'Dried Bouquets',
+];
+
 const PRICE_RANGES = [
   { id: 'all', label: 'All Prices' },
   { id: 'under-1500', label: 'Under ₹1,500' },
@@ -14,7 +25,12 @@ const PRICE_RANGES = [
   { id: 'over-2000', label: '₹2,000 & Above' },
 ];
 
-function FlowersCatalogContent() {
+interface FlowersClientViewProps {
+  products: Product[];
+  occasions?: string[];
+}
+
+function FlowersCatalogInner({ products, occasions = DEFAULT_OCCASIONS }: FlowersClientViewProps) {
   const searchParams = useSearchParams();
   const initialOccasion = searchParams.get('occasion') || 'All';
   const initialCategory = searchParams.get('category') || 'all';
@@ -27,39 +43,53 @@ function FlowersCatalogContent() {
   const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
 
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter((item) => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = item.name.toLowerCase().includes(q);
-        const matchesTagline = item.tagline.toLowerCase().includes(q);
-        const matchesFlower = item.flowerType.toLowerCase().includes(q);
-        if (!matchesName && !matchesTagline && !matchesFlower) return false;
-      }
+    return products
+      .filter((item) => {
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const matchesName = item.name.toLowerCase().includes(q);
+          const matchesTagline = item.tagline.toLowerCase().includes(q);
+          const matchesFlower = item.flowerType.toLowerCase().includes(q);
+          if (!matchesName && !matchesTagline && !matchesFlower) return false;
+        }
 
-      if (selectedOccasion !== 'All') {
-        if (!item.occasion.includes(selectedOccasion)) return false;
-      }
+        if (selectedOccasion !== 'All') {
+          if (!item.occasion.includes(selectedOccasion)) return false;
+        }
 
-      if (initialCategory !== 'all' && selectedOccasion === 'All') {
-        if (item.category !== initialCategory) return false;
-      }
+        if (initialCategory !== 'all' && selectedOccasion === 'All') {
+          if (item.category !== initialCategory) return false;
+        }
 
-      if (selectedType !== 'All') {
-        if (!item.flowerType.toLowerCase().includes(selectedType.toLowerCase())) return false;
-      }
+        if (selectedType !== 'All') {
+          if (!item.flowerType.toLowerCase().includes(selectedType.toLowerCase())) return false;
+        }
 
-      if (selectedPriceRange === 'under-1500' && item.price >= 1500) return false;
-      if (selectedPriceRange === '1500-2000' && (item.price < 1500 || item.price > 2000)) return false;
-      if (selectedPriceRange === 'over-2000' && item.price <= 2000) return false;
+        if (selectedPriceRange === 'under-1500' && item.price >= 1500) return false;
+        if (
+          selectedPriceRange === '1500-2000' &&
+          (item.price < 1500 || item.price > 2000)
+        )
+          return false;
+        if (selectedPriceRange === 'over-2000' && item.price <= 2000) return false;
 
-      return true;
-    }).sort((a, b) => {
-      if (sortBy === 'price-low') return a.price - b.price;
-      if (sortBy === 'price-high') return b.price - a.price;
-      if (sortBy === 'rating') return b.rating - a.rating;
-      return 0;
-    });
-  }, [searchQuery, selectedOccasion, initialCategory, selectedType, selectedPriceRange, sortBy]);
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'price-low') return a.price - b.price;
+        if (sortBy === 'price-high') return b.price - a.price;
+        if (sortBy === 'rating') return b.rating - a.rating;
+        return 0;
+      });
+  }, [
+    products,
+    searchQuery,
+    selectedOccasion,
+    initialCategory,
+    selectedType,
+    selectedPriceRange,
+    sortBy,
+  ]);
 
   const handleResetFilters = () => {
     setSelectedOccasion('All');
@@ -78,12 +108,15 @@ function FlowersCatalogContent() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="mb-8">
-        <span className="text-xs uppercase font-bold tracking-widest text-rose-700">Artisan Catalog</span>
+        <span className="text-xs uppercase font-bold tracking-widest text-rose-700">
+          Artisan Catalog
+        </span>
         <h1 className="text-3xl sm:text-4xl font-serif font-bold text-stone-900 mt-1">
           Handcrafted Fresh Bouquets & Arrangements
         </h1>
         <p className="text-stone-600 text-sm mt-1 max-w-2xl">
-          Cut fresh daily and hand-tied with custom stationery. Explore our curated selection of roses, peonies, lilies, and sustainable dried botanicals.
+          Cut fresh daily and hand-tied with custom stationery. Explore our curated selection of
+          roses, peonies, lilies, and sustainable dried botanicals.
         </p>
       </div>
 
@@ -129,7 +162,7 @@ function FlowersCatalogContent() {
           <span className="text-xs font-semibold text-stone-500 mr-1 flex items-center gap-1">
             <Filter className="w-3.5 h-3.5" /> Occasion:
           </span>
-          {OCCASIONS.map((occ) => (
+          {occasions.map((occ) => (
             <button
               key={occ}
               onClick={() => setSelectedOccasion(occ)}
@@ -196,9 +229,12 @@ function FlowersCatalogContent() {
       ) : (
         <div className="text-center py-20 bg-white rounded-2xl border border-stone-200 p-8">
           <Sparkles className="w-10 h-10 text-rose-300 mx-auto mb-3" />
-          <h3 className="font-serif text-lg font-semibold text-stone-800">No matching bouquets found</h3>
+          <h3 className="font-serif text-lg font-semibold text-stone-800">
+            No matching bouquets found
+          </h3>
           <p className="text-stone-500 text-xs mt-1 max-w-sm mx-auto">
-            Try resetting your filters or searching for another variety like roses, peonies, or sunflowers.
+            Try resetting your filters or searching for another variety like roses, peonies, or
+            sunflowers.
           </p>
           <button
             onClick={handleResetFilters}
@@ -212,7 +248,7 @@ function FlowersCatalogContent() {
   );
 }
 
-export default function FlowersCatalogPage() {
+export default function FlowersClientView(props: FlowersClientViewProps) {
   return (
     <Suspense
       fallback={
@@ -221,7 +257,7 @@ export default function FlowersCatalogPage() {
         </div>
       }
     >
-      <FlowersCatalogContent />
+      <FlowersCatalogInner {...props} />
     </Suspense>
   );
 }

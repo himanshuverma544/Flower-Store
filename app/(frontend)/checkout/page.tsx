@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, FormEvent } from 'react';
+import React, { useState, useEffect, useRef, FormEvent, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -11,11 +11,57 @@ import {
   CheckCircle2,
   Lock,
   Sparkles,
+  AlertCircle,
+  AlertTriangle,
+  RotateCcw,
+  Smartphone,
+  Building2,
+  Wallet,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '@/context/CartContext';
 import { formatINR } from '@/lib/currency';
 import { RecipientInfo, SenderInfo, Order } from '@/types';
+import {
+  RazorpayOptions,
+  RazorpaySuccessResponse,
+} from '@/types/razorpay';
+
+/**
+ * Loads the external Razorpay Checkout SDK dynamically.
+ * Resolves true once window.Razorpay is available.
+ */
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') {
+      resolve(false);
+      return;
+    }
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const existingScript = document.getElementById('razorpay-checkout-sdk');
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(true));
+      existingScript.addEventListener('error', () => resolve(false));
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'razorpay-checkout-sdk';
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
+interface PaymentAlertState {
+  type: 'warning' | 'error' | 'info';
+  title: string;
+  message: string;
+}
 
 export default function CheckoutPage() {
   const {
@@ -28,7 +74,7 @@ export default function CheckoutPage() {
     clearCart,
   } = useCart();
 
-  // Step state (1: Details, 3: Confirmed)
+  // Step state (1: Details & Payment, 3: Confirmation)
   const [step, setStep] = useState<number>(1);
 
   // Form State
@@ -50,17 +96,40 @@ export default function CheckoutPage() {
     keepSecret: true,
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'apple' | 'cod'>('card');
-  const [cardInfo, setCardInfo] = useState({
-    number: '4242 •••• •••• 4242',
-    expiry: '12/28',
-    cvc: '888',
-    name: 'Alex Morgan',
-  });
-
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [paymentAlert, setPaymentAlert] = useState<PaymentAlertState | null>(null);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
 
+  // Preload Razorpay Checkout SDK on page mount
+  useEffect(() => {
+    loadRazorpayScript();
+  }, []);
+
+  // Maintain client idempotency key per cart/coupon revision
+  // Regenerates only if the cart contents or coupon changes
+  const cartSignature = useMemo(() => {
+    return `${cart
+      .map(
+        (c) =>
+          `${c.cartItemId}:${c.quantity}:${c.selectedSize?.name || ''}:${c.selectedVase?.id || ''}`
+      )
+      .join('|')}_${couponCode || ''}`;
+  }, [cart, couponCode]);
+
+  const [idempotencyKey, setIdempotencyKey] = useState<string>(
+    () => `flx_chk_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+  );
+  const lastSignatureRef = useRef(cartSignature);
+
+  useEffect(() => {
+    if (lastSignatureRef.current !== cartSignature) {
+      lastSignatureRef.current = cartSignature;
+      setIdempotencyKey(`flx_chk_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
+    }
+  }, [cartSignature]);
+
+  // Empty cart fallback
   if (cart.length === 0 && !placedOrder) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-24 text-center">
@@ -81,66 +150,100 @@ export default function CheckoutPage() {
     );
   }
 
-  const handlePlaceOrder = async (e: FormEvent) => {
-    e.preventDefault();
+  /**
+   * Handles payment success callback from the Razorpay modal.
+   * Strictly initiates server-side cryptographic signature & payment verification.
+   * Displays payment success only AFTER the backend confirms verified, accepted status.
+   * Preserves cart and shows error banner if verification fails.
+   */
+  const handlePaymentSuccess = async (
+    orderData: {
+      orderId: string;
+      razorpayOrderId: string;
+      amount: number;
+      currency: string;
+      keyId: string;
+      trackingToken?: string;
+      subtotal?: number;
+      discountAmount?: number;
+      shippingFee?: number;
+      total?: number;
+      status: string;
+    },
+    response: RazorpaySuccessResponse
+  ) => {
     setIsProcessing(true);
+    setIsVerifying(true);
+    setPaymentAlert(null);
 
     try {
-      const estimatedDelivery = cart[0]?.deliveryDate || 'Tomorrow';
-      const slot = cart[0]?.deliverySlot || 'Morning (9 AM - 1 PM)';
-
-      const res = await fetch('/api/orders', {
+      // Initiate authoritative server-side signature and capture verification
+      const verifyRes = await fetch('/api/payments/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: cart,
-          recipient,
-          sender,
-          total,
-          subtotal,
-          discountAmount,
-          shippingFee,
-          estimatedDelivery,
-          slot,
+          orderId: orderData.orderId,
+          razorpayOrderId: orderData.razorpayOrderId,
+          razorpayPaymentId: response.razorpay_payment_id,
+          razorpaySignature: response.razorpay_signature,
+          trackingToken: orderData.trackingToken,
         }),
       });
 
-      const data = await res.json();
+      const verifyData = await verifyRes.json();
 
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to place order');
+      if (!verifyRes.ok || !verifyData.success) {
+        throw new Error(
+          verifyData.message ||
+            verifyData.error ||
+            'Payment verification failed on the server. If money was debited, it will be automatically reconciled.'
+        );
       }
 
+      // Verification confirmed by server!
+      const estimatedDelivery = cart[0]?.deliveryDate || 'Tomorrow';
+      const slot = cart[0]?.deliverySlot || 'Morning (9 AM - 1 PM)';
+
       const newOrder: Order = {
-        id: data.orderId,
+        id: orderData.orderId,
+        trackingToken: orderData.trackingToken,
+        razorpayOrderId: orderData.razorpayOrderId,
+        razorpayPaymentId: response.razorpay_payment_id,
         date: new Date().toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
           year: 'numeric',
         }),
         items: [...cart],
-        subtotal,
-        discountAmount,
-        shippingFee,
-        total,
+        subtotal: orderData.subtotal ?? subtotal,
+        discountAmount: orderData.discountAmount ?? discountAmount,
+        shippingFee: orderData.shippingFee ?? shippingFee,
+        total: orderData.total ?? total,
         recipient,
         sender,
-        status: 'Order Received & Verified',
+        cardMessage: cart[0]?.cardMessage,
+        status: orderData.status || 'Payment Pending',
         currentStep: 1,
         estimatedDelivery,
         slot,
       };
 
-      // Cache locally for instant track-order access
+      if (verifyData.status) {
+        newOrder.status = verifyData.status;
+      }
+
+      // Cache locally for instant track-order access with tracking token
       try {
         const existing = JSON.parse(localStorage.getItem('floralux_orders') || '[]');
         localStorage.setItem('floralux_orders', JSON.stringify([newOrder, ...existing]));
       } catch (err) {
-        console.error('Error caching order locally', err);
+        console.error('Error caching order locally:', err);
       }
 
       setPlacedOrder(newOrder);
       clearCart();
+      setIsProcessing(false);
+      setIsVerifying(false);
       setStep(3);
 
       try {
@@ -153,11 +256,136 @@ export default function CheckoutPage() {
       } catch (e) {
         // ignore
       }
-    } catch (err) {
-      console.error('Order placement failed:', err);
-      alert('Something went wrong placing your order. Please try again.');
-    } finally {
+    } catch (verifyErr: any) {
+      console.error('Server payment verification error:', verifyErr);
       setIsProcessing(false);
+      setIsVerifying(false);
+      setPaymentAlert({
+        type: 'error',
+        title: 'Payment Verification Error',
+        message:
+          verifyErr.message ||
+          'Server payment verification could not be completed. Your cart has been safely preserved.',
+      });
+    }
+  };
+
+  /**
+   * Primary checkout handler.
+   * Calls server-authoritative /api/payments/create-order and launches Razorpay modal.
+   */
+  const handlePlaceOrder = async (e: FormEvent) => {
+    e.preventDefault();
+    if (cart.length === 0) return;
+
+    setPaymentAlert(null);
+    setIsProcessing(true);
+
+    try {
+      // 1. Ensure Razorpay Checkout SDK is loaded
+      const scriptReady = await loadRazorpayScript();
+      if (!scriptReady || !window.Razorpay) {
+        setIsProcessing(false);
+        setPaymentAlert({
+          type: 'error',
+          title: 'Gateway Unavailable',
+          message: 'Payment gateway SDK failed to load. Please check your internet connection.',
+        });
+        return;
+      }
+
+      const estimatedDelivery = cart[0]?.deliveryDate || 'Tomorrow';
+      const slot = cart[0]?.deliverySlot || 'Morning (9 AM - 1 PM)';
+      const cardMessage = cart[0]?.cardMessage || undefined;
+
+      // 2. Authoritative server-side payment order creation
+      const res = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart,
+          couponCode: couponCode || undefined,
+          recipient,
+          sender,
+          cardMessage,
+          deliveryDate: estimatedDelivery,
+          deliverySlot: slot,
+          idempotencyKey,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setIsProcessing(false);
+        const errorDetail = data.error || data.message || 'Payment gateway communication failed.';
+        setPaymentAlert({
+          type: 'error',
+          title: 'Payment Gateway Error',
+          message: `${data.message || 'Unable to initialize order'}${data.error && data.error !== data.message ? ` (${data.error})` : ''}.`,
+        });
+        return;
+      }
+
+      // 3. Initialize Razorpay modal using server-provided details
+      const options: RazorpayOptions = {
+        key: data.keyId,
+        amount: data.amount, // Authoritative integer amount in paise from server
+        currency: data.currency || 'INR',
+        name: 'FloraLux Floral Studio',
+        description: `Bouquet Order #${data.orderId}`,
+        order_id: data.razorpayOrderId,
+        prefill: {
+          name: sender.senderName,
+          email: sender.senderEmail,
+          contact: sender.senderPhone,
+        },
+        notes: {
+          orderId: data.orderId,
+        },
+        theme: {
+          color: '#be123c', // Rose-700
+        },
+        modal: {
+          ondismiss: () => {
+            setIsProcessing(false);
+            setPaymentAlert({
+              type: 'warning',
+              title: 'Payment Window Closed',
+              message:
+                'Payment was not completed. Your floral bouquet and order details remain safely saved in your cart. You can reopen checkout at any time.',
+            });
+          },
+        },
+        handler: (response: RazorpaySuccessResponse) => {
+          handlePaymentSuccess(data, response);
+        },
+      };
+
+      const rzpInstance = new window.Razorpay(options);
+
+      rzpInstance.on('payment.failed', (failResponse: any) => {
+        setIsProcessing(false);
+        const reason =
+          failResponse?.error?.description ||
+          failResponse?.error?.reason ||
+          'Payment transaction was declined or interrupted by the gateway.';
+        setPaymentAlert({
+          type: 'error',
+          title: 'Payment Failed',
+          message: `${reason} Your cart items and discounts are intact. Please try another card or UPI option.`,
+        });
+      });
+
+      rzpInstance.open();
+    } catch (err: any) {
+      console.error('Order placement failed:', err);
+      setIsProcessing(false);
+      setPaymentAlert({
+        type: 'error',
+        title: 'Checkout Error',
+        message: err.message || 'Something went wrong initiating your payment. Please try again.',
+      });
     }
   };
 
@@ -166,10 +394,10 @@ export default function CheckoutPage() {
       <div className="text-center max-w-xl mx-auto mb-10">
         <span className="text-xs uppercase font-bold tracking-widest text-rose-700 flex items-center justify-center gap-1.5">
           <Lock className="w-3.5 h-3.5 text-rose-600" />
-          Encrypted 256-Bit SSL Checkout
+          Encrypted 256-Bit SSL Checkout • Razorpay Test Mode
         </span>
         <h1 className="text-3xl font-serif font-bold text-stone-900 mt-1">
-          {step === 3 ? 'Order Confirmed!' : 'Complete Your Floral Gift'}
+          {step === 3 ? 'Order Registered!' : 'Complete Your Floral Gift'}
         </h1>
       </div>
 
@@ -180,14 +408,16 @@ export default function CheckoutPage() {
           </div>
 
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">
-              Payment & Order Successful
-            </span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold uppercase tracking-wider mb-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              Payment Authorized • Verification Pending
+            </div>
             <h2 className="font-serif text-3xl font-bold text-stone-900 mt-1">
               Thank You, {placedOrder.sender.senderName}!
             </h2>
             <p className="text-stone-600 text-sm mt-1">
-              Confirmation receipt sent to <strong>{placedOrder.sender.senderEmail}</strong>
+              Your order has been recorded and an email receipt has been sent to{' '}
+              <strong>{placedOrder.sender.senderEmail}</strong>
             </p>
           </div>
 
@@ -196,6 +426,22 @@ export default function CheckoutPage() {
               <span className="text-stone-500 font-medium">Tracking Order ID:</span>
               <span className="font-bold text-stone-900 font-mono text-sm">{placedOrder.id}</span>
             </div>
+            {placedOrder.razorpayPaymentId && (
+              <div className="flex justify-between border-b border-stone-200/60 pb-2">
+                <span className="text-stone-500 font-medium">Razorpay Payment ID:</span>
+                <span className="font-mono text-stone-700 text-xs font-medium">
+                  {placedOrder.razorpayPaymentId}
+                </span>
+              </div>
+            )}
+            {placedOrder.razorpayOrderId && (
+              <div className="flex justify-between border-b border-stone-200/60 pb-2">
+                <span className="text-stone-500 font-medium">Razorpay Order ID:</span>
+                <span className="font-mono text-stone-700 text-xs font-medium">
+                  {placedOrder.razorpayOrderId}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between border-b border-stone-200/60 pb-2">
               <span className="text-stone-500 font-medium">Delivering To:</span>
               <span className="font-semibold text-stone-800">
@@ -210,7 +456,7 @@ export default function CheckoutPage() {
               </span>
             </div>
             <div className="flex justify-between pt-1">
-              <span className="text-stone-500 font-medium">Total Billed:</span>
+              <span className="text-stone-500 font-medium">Total Authorized:</span>
               <span className="font-bold text-stone-900 font-serif text-sm">
                 {formatINR(placedOrder.total)}
               </span>
@@ -219,7 +465,11 @@ export default function CheckoutPage() {
 
           <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              href={`/track-order?id=${placedOrder.id}`}
+              href={`/track-order?id=${placedOrder.id}${
+                placedOrder.trackingToken
+                  ? `&token=${encodeURIComponent(placedOrder.trackingToken)}`
+                  : ''
+              }`}
               className="px-6 py-3.5 bg-rose-700 hover:bg-rose-800 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
             >
               <Truck className="w-4 h-4" />
@@ -393,94 +643,77 @@ export default function CheckoutPage() {
 
               {/* Payment Details */}
               <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm space-y-4">
-                <div className="flex items-center gap-2 border-b border-stone-100 pb-3">
-                  <div className="w-7 h-7 rounded-full bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center">
-                    3
-                  </div>
-                  <h3 className="font-serif text-lg font-semibold text-stone-900">
-                    Secure Payment Method
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('card')}
-                    className={`p-3 rounded-xl border text-center text-xs font-semibold transition-all ${
-                      paymentMethod === 'card'
-                        ? 'border-rose-700 bg-rose-50/70 text-rose-900 ring-1 ring-rose-700'
-                        : 'border-stone-200 bg-stone-50/50 text-stone-700'
-                    }`}
-                  >
-                    Credit / Debit Card
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('apple')}
-                    className={`p-3 rounded-xl border text-center text-xs font-semibold transition-all ${
-                      paymentMethod === 'apple'
-                        ? 'border-rose-700 bg-rose-50/70 text-rose-900 ring-1 ring-rose-700'
-                        : 'border-stone-200 bg-stone-50/50 text-stone-700'
-                    }`}
-                  >
-                     Apple Pay
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('cod')}
-                    className={`p-3 rounded-xl border text-center text-xs font-semibold transition-all ${
-                      paymentMethod === 'cod'
-                        ? 'border-rose-700 bg-rose-50/70 text-rose-900 ring-1 ring-rose-700'
-                        : 'border-stone-200 bg-stone-50/50 text-stone-700'
-                    }`}
-                  >
-                    Pay On Delivery
-                  </button>
-                </div>
-
-                {paymentMethod === 'card' && (
-                  <div className="space-y-3 pt-2">
-                    <div>
-                      <label className="block text-xs font-semibold text-stone-700 mb-1">
-                        Card Number
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          required
-                          value={cardInfo.number}
-                          onChange={(e) => setCardInfo({ ...cardInfo, number: e.target.value })}
-                          className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-stone-300 font-mono"
-                        />
-                        <CreditCard className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
-                      </div>
+                <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center">
+                      3
                     </div>
+                    <h3 className="font-serif text-lg font-semibold text-stone-900">
+                      Razorpay Secure Payment
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Test Mode Active
+                  </div>
+                </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-stone-700 mb-1">
-                          Expiration (MM/YY)
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={cardInfo.expiry}
-                          onChange={(e) => setCardInfo({ ...cardInfo, expiry: e.target.value })}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-stone-700 mb-1">
-                          Security CVC
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={cardInfo.cvc}
-                          onChange={(e) => setCardInfo({ ...cardInfo, cvc: e.target.value })}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 font-mono"
-                        />
-                      </div>
+                {/* Gateway Feature Badges */}
+                <div className="p-4 rounded-xl bg-gradient-to-br from-rose-50/60 via-stone-50 to-stone-50 border border-rose-100/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-semibold text-stone-800 flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-rose-700" />
+                      <span>Razorpay Trusted Gateway</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-stone-500 font-medium">
+                      INR Currency • 100% Secure
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-stone-600 leading-relaxed">
+                    Upon clicking place order, the official Razorpay Checkout modal will open. You can
+                    complete payment using cards, UPI, or test instruments without leaving the page.
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
+                    <div className="p-2 bg-white rounded-lg border border-stone-200/80 flex items-center gap-2">
+                      <CreditCard className="w-3.5 h-3.5 text-rose-600" />
+                      <span className="text-[11px] font-medium text-stone-700">Cards</span>
+                    </div>
+                    <div className="p-2 bg-white rounded-lg border border-stone-200/80 flex items-center gap-2">
+                      <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-[11px] font-medium text-stone-700">UPI / QR</span>
+                    </div>
+                    <div className="p-2 bg-white rounded-lg border border-stone-200/80 flex items-center gap-2">
+                      <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                      <span className="text-[11px] font-medium text-stone-700">Netbanking</span>
+                    </div>
+                    <div className="p-2 bg-white rounded-lg border border-stone-200/80 flex items-center gap-2">
+                      <Wallet className="w-3.5 h-3.5 text-amber-600" />
+                      <span className="text-[11px] font-medium text-stone-700">Wallets</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Alert / State Notification */}
+                {paymentAlert && (
+                  <div
+                    className={`p-4 rounded-xl border flex items-start gap-3 text-xs ${
+                      paymentAlert.type === 'error'
+                        ? 'bg-rose-50 border-rose-200 text-rose-800'
+                        : paymentAlert.type === 'warning'
+                        ? 'bg-amber-50 border-amber-200 text-amber-900'
+                        : 'bg-blue-50 border-blue-200 text-blue-800'
+                    }`}
+                  >
+                    {paymentAlert.type === 'error' ? (
+                      <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1 space-y-1">
+                      <strong className="block font-semibold">{paymentAlert.title}</strong>
+                      <p className="leading-relaxed">{paymentAlert.message}</p>
                     </div>
                   </div>
                 )}
@@ -488,20 +721,24 @@ export default function CheckoutPage() {
                 <button
                   type="submit"
                   disabled={isProcessing}
-                  className="w-full mt-4 py-4 bg-rose-700 hover:bg-rose-800 disabled:bg-rose-400 text-white font-semibold text-sm rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2"
+                  className="w-full mt-4 py-4 bg-rose-700 hover:bg-rose-800 disabled:bg-rose-400 text-white font-semibold text-sm rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
                 >
                   {isProcessing ? (
                     <>
                       <Sparkles className="w-4 h-4 animate-spin" />
-                      <span>Authorizing Florist Order...</span>
+                      <span>{isVerifying ? 'Verifying Payment with Gateway...' : 'Opening Secure Razorpay Gateway...'}</span>
                     </>
                   ) : (
                     <>
                       <Lock className="w-4 h-4" />
-                      <span>Place Flower Order — {formatINR(total)}</span>
+                      <span>Proceed to Razorpay Checkout — {formatINR(total)}</span>
                     </>
                   )}
                 </button>
+
+                <p className="text-center text-[11px] text-stone-500">
+                  Transactions are encrypted and authenticated directly with Razorpay.
+                </p>
               </div>
             </form>
           </div>
@@ -537,7 +774,7 @@ export default function CheckoutPage() {
                         ((item.selectedSize?.price || item.price) +
                           (item.selectedVase?.price || 0) +
                           (item.addons || []).reduce((a, b) => a + b.price, 0)) *
-                        item.quantity
+                          item.quantity
                       )}
                     </div>
                   </div>

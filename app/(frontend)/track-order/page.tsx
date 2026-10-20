@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense, FormEvent } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import {
@@ -67,52 +67,102 @@ function TrackOrderContent() {
   const [searchId, setSearchId] = useState<string>(queryId || '');
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [isSearching, setIsSearching] = useState<boolean>(false);
 
-  useEffect(() => {
+  const fetchAndSetOrder = useCallback(async (orderId: string) => {
+    const cleanId = orderId.trim();
+    if (!cleanId) return;
+
+    setIsSearching(true);
+    setErrorMessage('');
+
     try {
-      const savedOrders: Order[] = JSON.parse(localStorage.getItem('floralux_orders') || '[]');
-      if (queryId) {
-        const found = savedOrders.find((o) => o.id.toLowerCase() === queryId.toLowerCase());
-        if (found) {
-          setActiveOrder(found);
-          setSearchId(queryId);
+      // Check local storage for token if not present in URL
+      const queryToken = searchParams.get('token') || '';
+      let effectiveToken = queryToken;
+      if (!effectiveToken) {
+        try {
+          const savedOrders: Order[] = JSON.parse(localStorage.getItem('floralux_orders') || '[]');
+          const matching = savedOrders.find((o) => o.id.toLowerCase() === cleanId.toLowerCase());
+          if (matching?.trackingToken) {
+            effectiveToken = matching.trackingToken;
+          }
+        } catch {}
+      }
+
+      // 1. Fetch live from database via /api/orders
+      const trackingUrl = `/api/orders?id=${encodeURIComponent(cleanId)}${effectiveToken ? `&token=${encodeURIComponent(effectiveToken)}` : ''}`;
+      const res = await fetch(trackingUrl);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.order) {
+          setActiveOrder(data.order);
+          setSearchId(data.order.id);
+          setIsSearching(false);
           return;
         }
       }
-      if (savedOrders.length > 0) {
-        setActiveOrder(savedOrders[0]);
-        setSearchId(savedOrders[0].id);
-      } else {
+
+      // 2. Check local storage if not found on server
+      const savedOrders: Order[] = JSON.parse(localStorage.getItem('floralux_orders') || '[]');
+      const found = savedOrders.find((o) => o.id.toLowerCase() === cleanId.toLowerCase());
+      if (found) {
+        setActiveOrder(found);
+        setSearchId(found.id);
+        setIsSearching(false);
+        return;
+      }
+
+      // 3. Check demo sample order
+      if (cleanId.toUpperCase() === MOCK_DEMO_ORDER.id) {
+        setActiveOrder(MOCK_DEMO_ORDER);
+        setSearchId(MOCK_DEMO_ORDER.id);
+        setIsSearching(false);
+        return;
+      }
+
+      setErrorMessage(`No order found matching "${cleanId}". Try sample ID: ${MOCK_DEMO_ORDER.id}`);
+    } catch {
+      // Offline fallback to localStorage
+      try {
+        const savedOrders: Order[] = JSON.parse(localStorage.getItem('floralux_orders') || '[]');
+        const found = savedOrders.find((o) => o.id.toLowerCase() === cleanId.toLowerCase());
+        if (found) {
+          setActiveOrder(found);
+        } else {
+          setErrorMessage(`Unable to fetch order "${cleanId}". Please check your internet connection.`);
+        }
+      } catch {
+        setActiveOrder(MOCK_DEMO_ORDER);
+      }
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (queryId) {
+      fetchAndSetOrder(queryId);
+    } else {
+      try {
+        const savedOrders: Order[] = JSON.parse(localStorage.getItem('floralux_orders') || '[]');
+        if (savedOrders.length > 0) {
+          fetchAndSetOrder(savedOrders[0].id);
+        } else {
+          setActiveOrder(MOCK_DEMO_ORDER);
+          setSearchId(MOCK_DEMO_ORDER.id);
+        }
+      } catch {
         setActiveOrder(MOCK_DEMO_ORDER);
         setSearchId(MOCK_DEMO_ORDER.id);
       }
-    } catch (e) {
-      setActiveOrder(MOCK_DEMO_ORDER);
     }
-  }, [queryId]);
+  }, [queryId, fetchAndSetOrder]);
 
   const handleTrackSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!searchId.trim()) return;
-
-    try {
-      const savedOrders: Order[] = JSON.parse(localStorage.getItem('floralux_orders') || '[]');
-      const found = savedOrders.find(
-        (o) => o.id.toLowerCase() === searchId.trim().toLowerCase()
-      );
-
-      if (found) {
-        setActiveOrder(found);
-        setErrorMessage('');
-      } else if (searchId.trim().toUpperCase() === MOCK_DEMO_ORDER.id) {
-        setActiveOrder(MOCK_DEMO_ORDER);
-        setErrorMessage('');
-      } else {
-        setErrorMessage(`No order found matching "${searchId}". Try sample ID: ${MOCK_DEMO_ORDER.id}`);
-      }
-    } catch (err) {
-      setActiveOrder(MOCK_DEMO_ORDER);
-    }
+    fetchAndSetOrder(searchId);
   };
 
   const steps = [
@@ -198,7 +248,7 @@ function TrackOrderContent() {
                 <div
                   className="bg-emerald-600 h-full transition-all duration-700"
                   style={{
-                    width: `${((activeOrder.currentStep || 2) / (steps.length - 1)) * 100}%`,
+                    width: `${Math.min(100, Math.max(0, (((activeOrder.currentStep || 1) - 1) / (steps.length - 1)) * 100))}%`,
                   }}
                 />
               </div>

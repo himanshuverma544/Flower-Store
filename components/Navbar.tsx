@@ -6,19 +6,32 @@ import { usePathname } from 'next/navigation';
 import { ShoppingBag, Search, Truck, Sparkles, Menu, X } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
-export default function Navbar() {
+import { SiteSettings } from '@/lib/payload';
+
+interface NavbarProps {
+  siteSettings?: SiteSettings;
+}
+
+export default function Navbar({ siteSettings }: NavbarProps) {
   const { totalItemCount, setIsDrawerOpen } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const pathname = usePathname();
 
+  const showAnnouncement = siteSettings?.announcementBar?.enabled ?? true;
+  const announcementText =
+    siteSettings?.announcementBar?.text ||
+    'Fresh Farm Blooms Cut Sunrise Daily • Same-Day Hand Delivery Before 2 PM • Use Code SPRING20 for 20% Off';
+
   return (
     <>
       {/* Announcement Bar */}
-      <div className="bg-rose-950 text-rose-100 text-xs py-2 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-2 border-b border-rose-900/50">
-        <Sparkles className="w-3.5 h-3.5 text-rose-300 animate-pulse" />
-        <span>Fresh Farm Blooms Cut Sunrise Daily • Same-Day Hand Delivery Before 2 PM • Use Code <strong className="text-rose-300 underline underline-offset-2">SPRING20</strong> for 20% Off</span>
-      </div>
+      {showAnnouncement && (
+        <div className="bg-rose-950 text-rose-100 text-xs py-2 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-2 border-b border-rose-900/50">
+          <Sparkles className="w-3.5 h-3.5 text-rose-300 animate-pulse" />
+          <span>{announcementText}</span>
+        </div>
+      )}
 
       {/* Main Header */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-stone-200/70 transition-all shadow-sm">

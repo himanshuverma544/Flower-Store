@@ -27,10 +27,10 @@ export default function CartDrawer() {
 
   if (!isDrawerOpen) return null;
 
-  const handleApplyCoupon = (e: FormEvent) => {
+  const handleApplyCoupon = async (e: FormEvent) => {
     e.preventDefault();
     if (!inputCode) return;
-    applyCoupon(inputCode);
+    await applyCoupon(inputCode);
   };
 
   const freeShippingThreshold = FREE_SHIPPING_THRESHOLD;

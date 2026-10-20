@@ -1,10 +1,11 @@
-import './globals.css';
+import '@/app/globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import { CartProvider } from '@/context/CartContext';
 import { Metadata } from 'next';
 import { ReactNode } from 'react';
+import { getStorefrontSiteSettings } from '@/lib/payload';
 
 export const metadata: Metadata = {
   title: 'FloraLux | Luxury Flower Delivery & Artisanal Fresh Blooms',
@@ -50,7 +51,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  let siteSettings;
+  try {
+    siteSettings = await getStorefrontSiteSettings();
+  } catch (e) {
+    console.error('Failed to load siteSettings in RootLayout:', e);
+  }
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Florist',
@@ -72,16 +79,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <head>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="min-h-screen flex flex-col font-sans bg-[#FAF8F5]">
+      <body className="min-h-screen flex flex-col font-sans bg-[#FAF8F5]" suppressHydrationWarning>
         <CartProvider>
-          <Navbar />
+          <Navbar siteSettings={siteSettings} />
           <CartDrawer />
           <main className="flex-1">{children}</main>
           <Footer />

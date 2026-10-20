@@ -1,6 +1,7 @@
 {
   "name": "flora-lux-flower-store",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,19 +11,28 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "generate:types": "payload generate:types",
+    "generate:importmap": "payload generate:importmap"
   },
   "prisma": {
     "seed": "node_modules/.bin/tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@payloadcms/db-postgres": "^3.90.2",
+    "@payloadcms/next": "^3.90.2",
+    "@payloadcms/richtext-lexical": "^3.90.2",
+    "@payloadcms/storage-s3": "^3.90.2",
     "@prisma/client": "^5.22.0",
     "canvas-confetti": "^1.9.3",
+    "graphql": "^16.14.2",
     "lucide-react": "^0.453.0",
-    "next": "^14.2.15",
+    "next": "^15.2.9",
+    "payload": "^3.90.2",
     "prisma": "^5.22.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

@@ -14,6 +14,16 @@ interface CouponResult {
   message: string;
 }
 
+interface AppliedCouponInfo {
+  code: string;
+  description: string;
+  discountType: 'percentage' | 'fixed_amount' | 'free_shipping';
+  discountValue: number;
+  minSpend: number;
+  maxDiscount: number | null;
+  freeShipping: boolean;
+}
+
 interface CartContextType {
   cart: CartItem[];
   isDrawerOpen: boolean;
@@ -28,7 +38,7 @@ interface CartContextType {
   total: number;
   totalItemCount: number;
   couponCode: string;
-  applyCoupon: (code: string) => CouponResult;
+  applyCoupon: (code: string) => Promise<CouponResult>;
   couponError: string;
 }
 
@@ -39,6 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [couponCode, setCouponCode] = useState<string>('');
   const [discount, setDiscount] = useState<number>(0);
+  const [appliedCouponInfo, setAppliedCouponInfo] = useState<AppliedCouponInfo | null>(null);
   const [couponError, setCouponError] = useState<string>('');
   const [shippingFee, setShippingFee] = useState<number>(STANDARD_SHIPPING_FEE);
 
@@ -108,31 +119,64 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCart([]);
     setDiscount(0);
     setCouponCode('');
+    setCouponError('');
+    setAppliedCouponInfo(null);
   };
 
-  const applyCoupon = (code: string): CouponResult => {
+  const applyCoupon = async (code: string): Promise<CouponResult> => {
     const clean = code.trim().toUpperCase();
-    if (clean === 'SPRING20') {
-      setDiscount(0.2);
+    if (!clean) {
+      setCouponError('Please enter a coupon code.');
+      return { success: false, message: 'Coupon code required' };
+    }
+
+    try {
+      const res = await fetch('/api/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: clean,
+          items: cart,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        const errorMsg = data.message || 'Invalid or expired promo code.';
+        setCouponError(errorMsg);
+        setCouponCode('');
+        setDiscount(0);
+        setAppliedCouponInfo(null);
+        return { success: false, message: errorMsg };
+      }
+
+      setCouponCode(data.code);
       setCouponError('');
-      setCouponCode('SPRING20');
-      return { success: true, message: 'Spring Bloom 20% discount applied!' };
-    } else if (clean === 'FREEDELIVERY') {
-      setShippingFee(0);
-      setCouponError('');
-      setCouponCode('FREEDELIVERY');
-      return { success: true, message: 'Free Express Delivery applied!' };
-    } else if (clean === 'BLOOM10') {
-      setDiscount(BLOOM10_FLAT_DISCOUNT);
-      setCouponError('');
-      setCouponCode('BLOOM10');
-      return {
-        success: true,
-        message: `${formatINR(BLOOM10_FLAT_DISCOUNT)} off applied to your bouquet!`,
-      };
-    } else {
-      setCouponError('Invalid promo code. Try "SPRING20" or "FREEDELIVERY"');
-      return { success: false, message: 'Invalid coupon' };
+      setAppliedCouponInfo({
+        code: data.code,
+        description: data.description,
+        discountType: data.discountType,
+        discountValue: data.discountValue,
+        minSpend: data.minSpend ?? 0,
+        maxDiscount: data.maxDiscount ?? null,
+        freeShipping: Boolean(data.freeShipping),
+      });
+
+      if (data.discountType === 'percentage') {
+        setDiscount(data.discountValue / 100);
+      } else if (data.discountType === 'fixed_amount') {
+        setDiscount(data.discountValue);
+      } else {
+        setDiscount(0);
+      }
+
+      const successMsg = data.description || `${data.code} applied successfully!`;
+      return { success: true, message: successMsg };
+    } catch (e: any) {
+      const errorMsg = 'Failed to validate promo code. Please try again.';
+      setCouponError(errorMsg);
+      return { success: false, message: errorMsg };
     }
   };
 
@@ -143,10 +187,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return acc + (base + vase + addons) * item.quantity;
   }, 0);
 
-  const discountAmount =
-    discount > 1 ? discount : Math.round(subtotal * discount * 100) / 100;
+  let discountAmount = 0;
+  if (appliedCouponInfo) {
+    if (appliedCouponInfo.minSpend > 0 && subtotal < appliedCouponInfo.minSpend) {
+      discountAmount = 0;
+    } else if (appliedCouponInfo.discountType === 'percentage') {
+      const raw = Math.round(subtotal * (appliedCouponInfo.discountValue / 100) * 100) / 100;
+      discountAmount = appliedCouponInfo.maxDiscount ? Math.min(raw, appliedCouponInfo.maxDiscount) : raw;
+    } else if (appliedCouponInfo.discountType === 'fixed_amount') {
+      discountAmount = Math.min(appliedCouponInfo.discountValue, subtotal);
+    }
+  } else if (discount > 0) {
+    discountAmount = discount > 1 ? Math.min(discount, subtotal) : Math.round(subtotal * discount * 100) / 100;
+  }
 
-  const currentShipping = subtotal > FREE_SHIPPING_THRESHOLD ? 0 : shippingFee;
+  const isFreeShippingCoupon = appliedCouponInfo?.freeShipping;
+  const currentShipping = (subtotal > FREE_SHIPPING_THRESHOLD || isFreeShippingCoupon) ? 0 : shippingFee;
   const total = Math.max(0, subtotal - discountAmount + currentShipping);
   const totalItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 

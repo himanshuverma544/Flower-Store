@@ -94,7 +94,7 @@ export default function FlowerCard({ flower }: FlowerCardProps) {
 
           <Link
             href={`/flower/${flower.slug}`}
-            className="px-4 py-2 bg-stone-900 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm hover:shadow"
+            className="px-4 py-2 bg-stone-900 hover:bg-rose-700 text-white text-[10px] font-semibold rounded-xl transition-all shadow-sm hover:shadow"
           >
             Customize & Gift
           </Link>

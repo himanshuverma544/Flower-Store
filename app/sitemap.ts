@@ -1,10 +1,11 @@
 import { MetadataRoute } from 'next';
-import { PRODUCTS } from '@/lib/data';
+import { getStorefrontProducts } from '@/lib/payload';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://floralux-boutique.com';
+  const products = await getStorefrontProducts();
 
-  const productUrls: MetadataRoute.Sitemap = PRODUCTS.map((flower) => ({
+  const productUrls: MetadataRoute.Sitemap = products.map((flower) => ({
     url: `${baseUrl}/flower/${flower.slug}`,
     lastModified: new Date(),
     changeFrequency: 'weekly',

@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound, useParams } from 'next/navigation';
 import {
   Star,
   Sparkles,
@@ -17,32 +16,47 @@ import {
   CheckCircle2,
   ArrowLeft,
 } from 'lucide-react';
-import { PRODUCTS, VASE_OPTIONS, GIFT_ADDONS, CARD_TEMPLATES } from '@/lib/data';
+import { CARD_TEMPLATES } from '@/lib/data';
 import { useCart } from '@/context/CartContext';
 import { formatINR } from '@/lib/currency';
-import { FlowerSize, VaseOption, GiftAddon, CardTemplate } from '@/types';
+import { Product, FlowerSize, VaseOption, GiftAddon, CardTemplate } from '@/types';
 
-export default function FlowerDetailPage() {
-  const params = useParams();
-  const slug = params?.slug as string;
-  const flower = PRODUCTS.find((p) => p.slug === slug);
+interface ProductDetailClientViewProps {
+  flower: Product;
+  vases: VaseOption[];
+  giftAddons: GiftAddon[];
+}
 
-  if (!flower) {
-    return notFound();
-  }
-
+export default function ProductDetailClientView({
+  flower,
+  vases,
+  giftAddons,
+}: ProductDetailClientViewProps) {
   const { addToCart } = useCart();
 
   // State
-  const [selectedImage, setSelectedImage] = useState<string>(flower.gallery[0] || flower.image);
-  const [selectedSize, setSelectedSize] = useState<FlowerSize>(flower.sizes[0]);
-  const [selectedVase, setSelectedVase] = useState<VaseOption>(VASE_OPTIONS[0]);
+  const [selectedImage, setSelectedImage] = useState<string>(
+    flower.gallery?.[0] || flower.image
+  );
+  const [selectedSize, setSelectedSize] = useState<FlowerSize>(
+    flower.sizes?.[0] || { name: 'Signature', stemCount: flower.stemCount, price: flower.price }
+  );
+  const [selectedVase, setSelectedVase] = useState<VaseOption>(
+    vases[0] || {
+      id: 'no-vase',
+      name: 'Wrapped in Craft Burlap & Ribbon (No Vase)',
+      price: 0,
+      image: '/images/vases/burlap.svg',
+    }
+  );
   const [selectedAddons, setSelectedAddons] = useState<GiftAddon[]>([]);
-  
+
   // Custom Card State
   const [includeCard, setIncludeCard] = useState<boolean>(true);
   const [cardTemplate, setCardTemplate] = useState<CardTemplate>(CARD_TEMPLATES[0]);
-  const [cardMessage, setCardMessage] = useState<string>('Wishing you a day filled with sunshine, love, and sweet blooms!');
+  const [cardMessage, setCardMessage] = useState<string>(
+    'Wishing you a day filled with sunshine, love, and sweet blooms!'
+  );
   const [cardSender, setCardSender] = useState<string>('');
 
   // Delivery Scheduler State
@@ -125,7 +139,7 @@ export default function FlowerDetailPage() {
           </div>
 
           {/* Thumbnails */}
-          {flower.gallery.length > 1 && (
+          {flower.gallery && flower.gallery.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
               {flower.gallery.map((img, idx) => (
                 <button
@@ -144,31 +158,35 @@ export default function FlowerDetailPage() {
           )}
 
           {/* Flower Symbolism Card */}
-          <div className="bg-rose-50/70 border border-rose-100/90 rounded-2xl p-5 mt-6">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-rose-900 flex items-center gap-1.5">
-              <Heart className="w-3.5 h-3.5 text-rose-600" />
-              Flower Language & Meaning
-            </h4>
-            <p className="text-xs text-rose-950/80 mt-1.5 leading-relaxed italic">
-              "{flower.symbolism}"
-            </p>
-          </div>
+          {flower.symbolism && (
+            <div className="bg-rose-50/70 border border-rose-100/90 rounded-2xl p-5 mt-6">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-rose-900 flex items-center gap-1.5">
+                <Heart className="w-3.5 h-3.5 text-rose-600" />
+                Flower Language & Meaning
+              </h4>
+              <p className="text-xs text-rose-950/80 mt-1.5 leading-relaxed italic">
+                &ldquo;{flower.symbolism}&rdquo;
+              </p>
+            </div>
+          )}
 
           {/* Care Tips Accordion Box */}
-          <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
-              <Droplets className="w-4 h-4 text-emerald-600" />
-              Florist Care Instructions
-            </h4>
-            <ul className="space-y-2 text-xs text-stone-600">
-              {flower.careTips.map((tip, idx) => (
-                <li key={idx} className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
-                  <span>{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {flower.careTips && flower.careTips.length > 0 && (
+            <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
+                <Droplets className="w-4 h-4 text-emerald-600" />
+                Florist Care Instructions
+              </h4>
+              <ul className="space-y-2 text-xs text-stone-600">
+                {flower.careTips.map((tip, idx) => (
+                  <li key={idx} className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Right Product Configurator Column (7 Cols) */}
@@ -210,36 +228,38 @@ export default function FlowerDetailPage() {
           </div>
 
           {/* Step 1: Choose Arrangement Size */}
-          <div className="space-y-3">
-            <label className="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center justify-between">
-              <span>Step 1: Choose Bouquet Stem Volume</span>
-              <span className="text-rose-700 font-normal lowercase">{selectedSize.name}</span>
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {flower.sizes.map((sz) => (
-                <button
-                  key={sz.name}
-                  type="button"
-                  onClick={() => setSelectedSize(sz)}
-                  className={`p-3.5 rounded-xl border text-left transition-all relative ${
-                    selectedSize.name === sz.name
-                      ? 'border-rose-700 bg-rose-50/50 ring-1 ring-rose-700'
-                      : 'border-stone-200 bg-white hover:border-stone-300'
-                  }`}
-                >
-                  <div className="text-xs font-semibold text-stone-900">{sz.name}</div>
-                  <div className="text-sm font-bold text-stone-800 font-serif mt-1">
-                    {formatINR(sz.price)}
-                  </div>
-                  {selectedSize.name === sz.name && (
-                    <div className="absolute top-3 right-3 text-rose-700">
-                      <Check className="w-4 h-4" />
+          {flower.sizes && flower.sizes.length > 0 && (
+            <div className="space-y-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center justify-between">
+                <span>Step 1: Choose Bouquet Stem Volume</span>
+                <span className="text-rose-700 font-normal lowercase">{selectedSize.name}</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {flower.sizes.map((sz) => (
+                  <button
+                    key={sz.name}
+                    type="button"
+                    onClick={() => setSelectedSize(sz)}
+                    className={`p-3.5 rounded-xl border text-left transition-all relative ${
+                      selectedSize.name === sz.name
+                        ? 'border-rose-700 bg-rose-50/50 ring-1 ring-rose-700'
+                        : 'border-stone-200 bg-white hover:border-stone-300'
+                    }`}
+                  >
+                    <div className="text-xs font-semibold text-stone-900">{sz.name}</div>
+                    <div className="text-sm font-bold text-stone-800 font-serif mt-1">
+                      {formatINR(sz.price)}
                     </div>
-                  )}
-                </button>
-              ))}
+                    {selectedSize.name === sz.name && (
+                      <div className="absolute top-3 right-3 text-rose-700">
+                        <Check className="w-4 h-4" />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Step 2: Choose Vessel / Vase */}
           <div className="space-y-3">
@@ -247,7 +267,7 @@ export default function FlowerDetailPage() {
               Step 2: Select Presentation & Vase
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {VASE_OPTIONS.map((vase) => (
+              {vases.map((vase) => (
                 <button
                   key={vase.id}
                   type="button"
@@ -283,7 +303,7 @@ export default function FlowerDetailPage() {
               Step 3: Sweet Add-Ons & Botanicals (Optional)
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {GIFT_ADDONS.map((addon) => {
+              {giftAddons.map((addon) => {
                 const isChecked = selectedAddons.some((a) => a.id === addon.id);
                 return (
                   <button
@@ -304,7 +324,9 @@ export default function FlowerDetailPage() {
                       <div className="text-[11px] font-semibold text-stone-900 leading-tight">
                         {addon.name}
                       </div>
-                      <div className="text-xs font-bold text-stone-700 mt-1">+{formatINR(addon.price)}</div>
+                      <div className="text-xs font-bold text-stone-700 mt-1">
+                        +{formatINR(addon.price)}
+                      </div>
                     </div>
                   </button>
                 );
@@ -381,7 +403,7 @@ export default function FlowerDetailPage() {
                     Card Preview ({cardTemplate.name})
                   </div>
                   <div className="font-serif italic text-stone-800 text-sm leading-relaxed">
-                    "{cardMessage || 'Your message here...'}"
+                    &ldquo;{cardMessage || 'Your message here...'}&rdquo;
                   </div>
                   {cardSender && (
                     <div className="text-right font-serif font-bold text-xs text-stone-700 mt-2">

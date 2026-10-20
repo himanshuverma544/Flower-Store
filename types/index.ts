@@ -109,6 +109,9 @@ export interface Order {
   sender: SenderInfo;
   cardMessage?: string;
   items: CartItem[];
+  trackingToken?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
 }
 
 export interface Testimonial {
