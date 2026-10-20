@@ -16,8 +16,7 @@ out/
 # Vercel
 .vercel/
 
-# Scripts
-scripts/
+
 
 # OS files
 .DS_Store

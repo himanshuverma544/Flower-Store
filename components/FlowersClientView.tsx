@@ -128,6 +128,7 @@ function FlowersCatalogInner({ products, occasions = DEFAULT_OCCASIONS }: Flower
               placeholder="Search by flower name, variety..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              suppressHydrationWarning
               className="w-full pl-9 pr-4 py-2 text-xs bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 text-stone-800"
             />
             <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />

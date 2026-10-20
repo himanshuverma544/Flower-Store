@@ -133,7 +133,7 @@ export default function Footer() {
                 <span>Welcome! Check your inbox for code <strong>BLOOM15</strong>.</span>
               </div>
             ) : (
-              <form onSubmit={handleSubscribe} className="space-y-2">
+              <form onSubmit={handleSubscribe} className="space-y-2" suppressHydrationWarning>
                 <div className="relative">
                   <input
                     type="email"
@@ -141,6 +141,7 @@ export default function Footer() {
                     placeholder="Enter your email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    suppressHydrationWarning
                     className="w-full px-3 py-2 text-xs bg-stone-800 rounded-lg border border-stone-700 text-white placeholder:text-stone-500 focus:outline-none focus:border-rose-400"
                   />
                   <Mail className="w-3.5 h-3.5 text-stone-500 absolute right-3 top-2.5" />

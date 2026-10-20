@@ -19,7 +19,7 @@ const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
 
 // Cloudflare R2 Media Storage Configuration (Enforced in all environments)
-const r2Bucket = process.env.R2_BUCKET_NAME;
+const r2Bucket = process.env.R2_BUCKET_NAME || process.env.R2_BUCKET;
 const r2AccessKeyId = process.env.R2_ACCESS_KEY_ID;
 const r2SecretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
 const r2AccountId = process.env.R2_ACCOUNT_ID;
@@ -29,7 +29,7 @@ const r2Endpoint =
 const r2PublicUrl = process.env.R2_PUBLIC_URL;
 
 const missingR2Vars: string[] = [];
-if (!r2Bucket) missingR2Vars.push('R2_BUCKET_NAME');
+if (!r2Bucket) missingR2Vars.push('R2_BUCKET_NAME (or R2_BUCKET)');
 if (!r2AccessKeyId) missingR2Vars.push('R2_ACCESS_KEY_ID');
 if (!r2SecretAccessKey) missingR2Vars.push('R2_SECRET_ACCESS_KEY');
 if (!r2Endpoint) missingR2Vars.push('R2_ENDPOINT (or R2_ACCOUNT_ID)');

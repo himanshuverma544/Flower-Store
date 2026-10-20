@@ -103,6 +103,7 @@ export default function Navbar({ siteSettings }: NavbarProps) {
                 action="/flowers"
                 method="GET"
                 className="hidden lg:flex items-center relative"
+                suppressHydrationWarning
               >
                 <input
                   type="text"
@@ -110,6 +111,7 @@ export default function Navbar({ siteSettings }: NavbarProps) {
                   placeholder="Search peonies, roses, lilies..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  suppressHydrationWarning
                   className="w-56 pl-9 pr-4 py-1.5 text-xs bg-stone-100/80 rounded-full border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:bg-white transition-all text-stone-800 placeholder:text-stone-400"
                 />
                 <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 pointer-events-none" />
@@ -138,11 +140,12 @@ export default function Navbar({ siteSettings }: NavbarProps) {
         {/* Mobile dropdown menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-stone-200 bg-white px-5 py-4 space-y-3 shadow-lg">
-            <form action="/flowers" method="GET" className="relative mb-3">
+            <form action="/flowers" method="GET" className="relative mb-3" suppressHydrationWarning>
               <input
                 type="text"
                 name="q"
                 placeholder="Search flowers, occasions..."
+                suppressHydrationWarning
                 className="w-full pl-9 pr-4 py-2 text-sm bg-stone-100 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
               />
               <Search className="w-4 h-4 text-stone-400 absolute left-3 top-3" />

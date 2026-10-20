@@ -317,13 +317,14 @@ export const OrdersManager: React.FC<{ user?: any }> = ({ user }) => {
           marginBottom: '20px',
         }}
       >
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }} suppressHydrationWarning>
           <div style={{ flex: '1 1 240px', minWidth: '220px' }}>
             <input
               type="text"
               placeholder="Search by Order ID, Customer, Recipient, Phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              suppressHydrationWarning
               style={{
                 width: '100%',
                 padding: '9px 14px',
@@ -348,6 +349,7 @@ export const OrdersManager: React.FC<{ user?: any }> = ({ user }) => {
                 setStartDate(e.target.value);
                 setCurrentPage(1);
               }}
+              suppressHydrationWarning
               style={{
                 padding: '8px 12px',
                 borderRadius: '8px',
@@ -368,6 +370,7 @@ export const OrdersManager: React.FC<{ user?: any }> = ({ user }) => {
                 setEndDate(e.target.value);
                 setCurrentPage(1);
               }}
+              suppressHydrationWarning
               style={{
                 padding: '8px 12px',
                 borderRadius: '8px',

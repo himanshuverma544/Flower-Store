@@ -346,6 +346,7 @@ export default function ProductDetailClientView({
                   type="checkbox"
                   checked={includeCard}
                   onChange={(e) => setIncludeCard(e.target.checked)}
+                  suppressHydrationWarning
                   className="rounded text-rose-600 focus:ring-rose-500"
                 />
                 Include Greeting Card
@@ -379,6 +380,7 @@ export default function ProductDetailClientView({
                     placeholder="Enter your heartfelt message..."
                     value={cardMessage}
                     onChange={(e) => setCardMessage(e.target.value)}
+                    suppressHydrationWarning
                     className="w-full text-xs p-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 bg-white text-stone-800"
                     maxLength={240}
                   />
@@ -393,6 +395,7 @@ export default function ProductDetailClientView({
                     placeholder="Signature / From (e.g. 'Always, Sarah')"
                     value={cardSender}
                     onChange={(e) => setCardSender(e.target.value)}
+                    suppressHydrationWarning
                     className="w-full text-xs px-3 py-2 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 bg-white"
                   />
                 </div>
@@ -436,6 +439,7 @@ export default function ProductDetailClientView({
                       setDeliveryDate(e.target.value);
                       setIsSameDay(false);
                     }}
+                    suppressHydrationWarning
                     className="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 text-stone-800"
                   />
                   <button

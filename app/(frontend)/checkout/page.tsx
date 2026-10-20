@@ -508,6 +508,7 @@ export default function CheckoutPage() {
                       required
                       value={recipient.fullName}
                       onChange={(e) => setRecipient({ ...recipient, fullName: e.target.value })}
+                      suppressHydrationWarning
                       className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                     />
                   </div>
@@ -520,6 +521,7 @@ export default function CheckoutPage() {
                       required
                       value={recipient.phone}
                       onChange={(e) => setRecipient({ ...recipient, phone: e.target.value })}
+                      suppressHydrationWarning
                       className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                     />
                   </div>
@@ -534,6 +536,7 @@ export default function CheckoutPage() {
                     required
                     value={recipient.address}
                     onChange={(e) => setRecipient({ ...recipient, address: e.target.value })}
+                    suppressHydrationWarning
                     className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                   />
                 </div>
@@ -547,6 +550,7 @@ export default function CheckoutPage() {
                       type="text"
                       value={recipient.apt}
                       onChange={(e) => setRecipient({ ...recipient, apt: e.target.value })}
+                      suppressHydrationWarning
                       className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                     />
                   </div>
@@ -559,6 +563,7 @@ export default function CheckoutPage() {
                       required
                       value={recipient.city}
                       onChange={(e) => setRecipient({ ...recipient, city: e.target.value })}
+                      suppressHydrationWarning
                       className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                     />
                   </div>
@@ -571,6 +576,7 @@ export default function CheckoutPage() {
                       required
                       value={recipient.zip}
                       onChange={(e) => setRecipient({ ...recipient, zip: e.target.value })}
+                      suppressHydrationWarning
                       className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                     />
                   </div>
@@ -585,6 +591,7 @@ export default function CheckoutPage() {
                     value={recipient.notes}
                     onChange={(e) => setRecipient({ ...recipient, notes: e.target.value })}
                     placeholder="e.g. Leave with doorman, Ring Apt 4B, surprise delivery"
+                    suppressHydrationWarning
                     className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                   />
                 </div>
@@ -611,6 +618,7 @@ export default function CheckoutPage() {
                       required
                       value={sender.senderName}
                       onChange={(e) => setSender({ ...sender, senderName: e.target.value })}
+                      suppressHydrationWarning
                       className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                     />
                   </div>
@@ -623,6 +631,7 @@ export default function CheckoutPage() {
                       required
                       value={sender.senderEmail}
                       onChange={(e) => setSender({ ...sender, senderEmail: e.target.value })}
+                      suppressHydrationWarning
                       className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                     />
                   </div>
@@ -633,6 +642,7 @@ export default function CheckoutPage() {
                     type="checkbox"
                     checked={sender.keepSecret}
                     onChange={(e) => setSender({ ...sender, keepSecret: e.target.checked })}
+                    suppressHydrationWarning
                     className="rounded text-rose-600 focus:ring-rose-500"
                   />
                   <span>

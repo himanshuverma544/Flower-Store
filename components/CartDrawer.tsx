@@ -188,13 +188,14 @@ export default function CartDrawer() {
           {cart.length > 0 && (
             <div className="p-5 border-t border-stone-200 bg-white space-y-3">
               {/* Promo Code Input */}
-              <form onSubmit={handleApplyCoupon} className="flex gap-2">
+              <form onSubmit={handleApplyCoupon} className="flex gap-2" suppressHydrationWarning>
                 <div className="relative flex-1">
                   <input
                     type="text"
                     placeholder="Promo code (e.g. SPRING20)"
                     value={inputCode}
                     onChange={(e) => setInputCode(e.target.value)}
+                    suppressHydrationWarning
                     className="w-full pl-8 pr-3 py-2 text-xs border border-stone-300 rounded-lg uppercase tracking-wider font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                   />
                   <Tag className="w-3.5 h-3.5 text-stone-400 absolute left-2.5 top-2.5" />

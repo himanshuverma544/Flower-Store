@@ -188,13 +188,14 @@ function TrackOrderContent() {
       </div>
 
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-sm mb-8">
-        <form onSubmit={handleTrackSubmit} className="flex gap-2">
+        <form onSubmit={handleTrackSubmit} className="flex gap-2" suppressHydrationWarning>
           <div className="relative flex-1">
             <input
               type="text"
               placeholder="Enter Order Tracking ID (e.g. FLX-829104)"
               value={searchId}
               onChange={(e) => setSearchId(e.target.value)}
+              suppressHydrationWarning
               className="w-full pl-9 pr-4 py-2.5 text-xs sm:text-sm rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-500/20 font-mono uppercase"
             />
             <Search className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" />
