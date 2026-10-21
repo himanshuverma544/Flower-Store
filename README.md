@@ -132,3 +132,4 @@ Visit [http://localhost:3000](http://localhost:3000) in your browser.
 
 > [!NOTE]
 > **Checkout Credential Status:** The Checkout modal's API key expiration is currently under investigation with Razorpay Support. Server-side payment verification and webhook processing are implemented and tested independently with cryptographic fixtures and mock suites.
+
