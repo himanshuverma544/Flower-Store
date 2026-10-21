@@ -53,7 +53,10 @@ if (process.env.SKIP_DB_MIGRATIONS === '1' || process.env.SKIP_DB_MIGRATIONS ===
   process.exit(0);
 }
 
-const isExplicitProd = process.argv.includes('--prod') || process.env.TARGET_ENV === 'production';
+const isExplicitProd =
+  process.argv.includes('--prod') ||
+  process.env.TARGET_ENV === 'production' ||
+  (process.env.VERCEL_ENV === 'production' && Boolean(process.env.PROD_DATABASE_URL || process.env.PROD_DATABASE_URL_UNPOOLED));
 
 let directUrl = null;
 let pooledUrl = null;
