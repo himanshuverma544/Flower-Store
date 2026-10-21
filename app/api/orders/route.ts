@@ -146,6 +146,53 @@ function constantTimeEquals(a: string, b: string): boolean {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
+function normalizeDisplayStatus(status: string): string {
+  const map: Record<string, string> = {
+    Payment_Pending: 'Payment Pending',
+    Order_Received___Verified: 'Order Received & Verified',
+    Order_Received: 'Order Received',
+    Crafting_Floral_Arrangement: 'Crafting Floral Arrangement',
+    Out_for_Delivery: 'Out for Delivery',
+    Delivered: 'Delivered',
+    Payment_Failed: 'Payment Failed',
+    Payment_Expired: 'Payment Expired',
+    Cancelled: 'Cancelled',
+  };
+  return map[status] || status;
+}
+
+function mapPayloadOrderToRow(row: any) {
+  if (!row) return null;
+  return {
+    id: row.order_id,
+    date: row.date,
+    total: Number(row.total),
+    status: normalizeDisplayStatus(row.status),
+    currentStep: Number(row.current_step || 1),
+    estimatedDelivery: row.estimated_delivery,
+    slot: row.slot,
+    recipientName: row.recipient_name,
+    recipientAddress: row.recipient_address,
+    recipientPhone: row.recipient_phone,
+    recipientApt: row.recipient_apt,
+    recipientCity: row.recipient_city,
+    recipientState: row.recipient_state,
+    recipientZip: row.recipient_zip,
+    recipientNotes: row.recipient_notes,
+    senderName: row.sender_name,
+    senderEmail: row.sender_email,
+    senderPhone: row.sender_phone,
+    keepSecret: Boolean(row.keep_secret),
+    cardMessage: row.card_message,
+    deliveryDate: row.delivery_date,
+    deliverySlot: row.delivery_slot,
+    itemsJson: row.items_json || JSON.stringify(row.items || []),
+    trackingToken: row.tracking_token,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 // ---- GET --------------------------------------------------------------------
 
 export async function GET(request: NextRequest) {
@@ -154,11 +201,12 @@ export async function GET(request: NextRequest) {
     const id = searchParams.get('id');
     const token = searchParams.get('token');
 
-    // 1. Single order tracking lookup
+    // 1. Single order tracking lookup from Payload CMS Orders
     if (id) {
-      const order = await prisma.order.findFirst({
-        where: { id: { equals: id, mode: 'insensitive' } },
+      const row = await prisma.cms_orders.findFirst({
+        where: { order_id: { equals: id.trim(), mode: 'insensitive' } },
       });
+      const order = mapPayloadOrderToRow(row);
 
       if (!order) {
         return NextResponse.json(
@@ -189,14 +237,17 @@ export async function GET(request: NextRequest) {
       if (token && token.trim()) {
         const cleanToken = token.trim();
 
-        // Check token securely in payload_kv
-        const tokenRow: Array<{ data: any }> = await prisma.$queryRawUnsafe(
-          `SELECT data FROM "payload"."payload_kv" WHERE "key" = $1;`,
-          `order_token:${order.id}`
-        );
+        if (order.trackingToken && constantTimeEquals(order.trackingToken, cleanToken)) {
+          isTokenVerified = true;
+        } else {
+          // Check token in payload_kv fallback
+          const tokenRow = await prisma.payload_kv.findUnique({
+            where: { key: `order_token:${order.id}` },
+          });
 
-        if (tokenRow && tokenRow.length > 0 && typeof tokenRow[0].data?.trackingToken === 'string') {
-          isTokenVerified = constantTimeEquals(tokenRow[0].data.trackingToken, cleanToken);
+          if (tokenRow?.data && typeof (tokenRow.data as any).trackingToken === 'string') {
+            isTokenVerified = constantTimeEquals((tokenRow.data as any).trackingToken, cleanToken);
+          }
         }
       }
 
@@ -225,10 +276,11 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const orders = await prisma.order.findMany({
-        orderBy: { createdAt: 'desc' },
+      const rows = await prisma.cms_orders.findMany({
+        orderBy: { created_at: 'desc' },
         take: 20,
       });
+      const orders = rows.map(mapPayloadOrderToRow).filter((o): o is NonNullable<typeof o> => Boolean(o));
 
       return NextResponse.json({
         success: true,
@@ -337,47 +389,53 @@ export async function POST(request: NextRequest) {
         reservedCouponCode = pricing.coupon.code;
       }
 
-      // Step B: Persist order in public.orders
-      await tx.order.create({
+      // Step B: Persist order in Payload CMS Orders collection
+      await tx.cms_orders.create({
         data: {
-          id: orderId,
+          order_id: orderId,
+          status: 'Order_Received___Verified',
+          current_step: 1,
           date: dateStr,
           total: pricing.total,
-          status: 'Order Received & Verified',
-          currentStep: 1,
-          estimatedDelivery: estimatedDelivery ?? deliveryDate ?? 'Tomorrow',
+          subtotal: pricing.subtotal,
+          delivery_fee: pricing.shippingFee,
+          discount: pricing.discountAmount,
+          sender_name: sender?.senderName ?? 'Anonymous Gifter',
+          sender_email: sender?.senderEmail ?? '',
+          sender_phone: sender?.senderPhone ?? '',
+          keep_secret: Boolean(sender?.keepSecret),
+          recipient_name: recipient?.fullName ?? 'Valued Recipient',
+          recipient_phone: recipient?.phone ?? '',
+          recipient_address: recipient?.address ?? '',
+          recipient_apt: recipient?.apt ?? '',
+          recipient_city: recipient?.city ?? '',
+          recipient_state: recipient?.state ?? '',
+          recipient_zip: recipient?.zip ?? '',
+          card_message: cardMessage ?? '',
+          recipient_notes: recipient?.notes ?? '',
+          delivery_date: deliveryDate ?? '',
+          delivery_slot: deliverySlot ?? '',
+          estimated_delivery: estimatedDelivery ?? deliveryDate ?? 'Tomorrow',
           slot: slot ?? deliverySlot ?? 'Morning (9 AM - 1 PM)',
-
-          recipientName: recipient?.fullName ?? 'Valued Recipient',
-          recipientAddress: recipient?.address ?? '',
-          recipientPhone: recipient?.phone ?? '',
-          recipientApt: recipient?.apt ?? '',
-          recipientCity: recipient?.city ?? '',
-          recipientState: recipient?.state ?? '',
-          recipientZip: recipient?.zip ?? '',
-          recipientNotes: recipient?.notes ?? '',
-
-          senderName: sender?.senderName ?? 'Anonymous Gifter',
-          senderEmail: sender?.senderEmail ?? '',
-          senderPhone: sender?.senderPhone ?? '',
-          keepSecret: sender?.keepSecret ?? false,
-
-          cardMessage: cardMessage ?? '',
-          deliveryDate: deliveryDate ?? '',
-          deliverySlot: deliverySlot ?? '',
-
-          itemsJson: JSON.stringify(itemsToSave),
+          items: itemsToSave as any,
+          items_json: JSON.stringify(itemsToSave),
+          payment_method: 'direct',
+          payment_status: 'paid',
+          tracking_token: trackingToken,
         },
       });
 
       // Step C: Persist unguessable tracking token securely in payload_kv
-      await tx.$executeRawUnsafe(
-        `INSERT INTO "payload"."payload_kv" ("key", "data")
-         VALUES ($1, $2::jsonb)
-         ON CONFLICT ("key") DO UPDATE SET "data" = EXCLUDED."data";`,
-        `order_token:${orderId}`,
-        JSON.stringify({ orderId, trackingToken, createdAt: new Date().toISOString() })
-      );
+      await tx.payload_kv.upsert({
+        where: { key: `order_token:${orderId}` },
+        create: {
+          key: `order_token:${orderId}`,
+          data: { orderId, trackingToken, createdAt: new Date().toISOString() },
+        },
+        update: {
+          data: { orderId, trackingToken, createdAt: new Date().toISOString() },
+        },
+      });
 
       // Step D: Commit coupon reservation within the same transaction
       if (reservedCouponCode) {

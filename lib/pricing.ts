@@ -56,10 +56,10 @@ export async function calculateCartPricing(
   }
 
   // 1. Fetch all add-ons and vases from payload.cms_addons for authoritative pricing
-  const addonsInDb: Array<{ id: number; slug: string; name: string; category: string; price: number }> =
-    await prisma.$queryRawUnsafe(
-      `SELECT id, slug, name, category, price FROM payload.cms_addons WHERE is_active = true;`
-    );
+  const addonsInDb = await prisma.cms_addons.findMany({
+    where: { is_active: true },
+    select: { id: true, slug: true, name: true, category: true, price: true },
+  });
 
   const addonBySlug = new Map<string, number>();
   const addonByName = new Map<string, number>();
@@ -75,15 +75,36 @@ export async function calculateCartPricing(
   for (const item of items) {
     const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
 
-    // Lookup base product in Prisma database
-    const product = await prisma.product.findFirst({
-      where: {
-        OR: [
-          { id: item.id },
-          { slug: item.slug || '' },
-        ],
-      },
-    });
+    // Lookup authoritative product in Payload CMS (payload.cms_products)
+    const itemSlug = (item.slug || '').trim();
+    const itemId = (item.id || '').trim();
+    const itemName = (item.name || '').trim();
+
+    // Check if pure numeric ID is provided (e.g., '4' or 4)
+    const numericId = /^\d+$/.test(itemId) ? parseInt(itemId, 10) : null;
+
+    const orConditions: any[] = [];
+    if (itemSlug) orConditions.push({ slug: { equals: itemSlug, mode: 'insensitive' } });
+    if (itemId) {
+      orConditions.push({ sku: { equals: itemId, mode: 'insensitive' } });
+      orConditions.push({ slug: { equals: itemId, mode: 'insensitive' } });
+    }
+    if (numericId !== null) orConditions.push({ id: numericId });
+    if (itemName) orConditions.push({ name: { equals: itemName, mode: 'insensitive' } });
+
+    const product = orConditions.length > 0
+      ? await prisma.cms_products.findFirst({
+          where: {
+            status: 'published',
+            OR: orConditions,
+          },
+          include: {
+            cms_products_sizes: {
+              orderBy: { order: 'asc' },
+            },
+          },
+        })
+      : null;
 
     if (!product) {
       return {
@@ -97,27 +118,91 @@ export async function calculateCartPricing(
       };
     }
 
-    // Determine bouquet size price
+    // Check if product is marked out of stock
+    if (product.stock_status === 'out_of_stock') {
+      return {
+        valid: false,
+        error: `Product "${product.name}" is currently out of stock.`,
+        subtotal: 0,
+        discountAmount: 0,
+        shippingFee: 0,
+        total: 0,
+        validatedItems: [],
+      };
+    }
+
+    // Check inventory quantity limit if defined
+    if (product.stock_quantity !== null && product.stock_quantity !== undefined) {
+      const stockQty = Number(product.stock_quantity);
+      if (stockQty > 0 && stockQty < qty) {
+        return {
+          valid: false,
+          error: `Only ${stockQty} unit(s) available in stock for "${product.name}".`,
+          subtotal: 0,
+          discountAmount: 0,
+          shippingFee: 0,
+          total: 0,
+          validatedItems: [],
+        };
+      }
+    }
+
+    // Authoritative bouquet sizes for this product from relational join
+    const sizeRows = product.cms_products_sizes;
+
+    // Determine authoritative bouquet size price
     let unitBasePrice = Number(product.price);
     let matchedSize = item.selectedSize;
 
     if (item.selectedSize?.name) {
-      try {
-        const sizes: Array<{ name: string; price: number; multiplier?: number }> =
-          JSON.parse(product.sizesJson || '[]');
-        const targetSize = sizes.find(
-          (s) => s.name.trim().toLowerCase() === item.selectedSize!.name.trim().toLowerCase()
-        );
-        if (targetSize) {
-          unitBasePrice = Number(targetSize.price);
-          matchedSize = {
-            name: targetSize.name,
-            price: unitBasePrice,
-            multiplier: targetSize.multiplier ?? 1,
-          };
-        }
-      } catch {
-        // Fall back to product.price if sizesJson parsing fails
+      const requestedSizeName = item.selectedSize.name.trim().toLowerCase();
+      // Match exact name or prefix (e.g. 'Standard' matching 'Standard (12 Stems)')
+      const targetSize = sizeRows.find((s) => {
+        const dbName = s.name.trim().toLowerCase();
+        return dbName === requestedSizeName || dbName.startsWith(requestedSizeName) || requestedSizeName.startsWith(dbName);
+      });
+
+      if (targetSize) {
+        unitBasePrice = Number(targetSize.price);
+        matchedSize = {
+          name: targetSize.name,
+          price: unitBasePrice,
+          multiplier: targetSize.multiplier ? Number(targetSize.multiplier) : 1,
+        };
+      } else if (sizeRows.length > 0) {
+        // If the product defines specific bouquet sizes, but the requested size does not match any of them:
+        return {
+          valid: false,
+          error: `Selected bouquet size "${item.selectedSize.name}" is not available for "${product.name}".`,
+          subtotal: 0,
+          discountAmount: 0,
+          shippingFee: 0,
+          total: 0,
+          validatedItems: [],
+        };
+      } else {
+        // Product has no sub-sizes array; fall back to base product price
+        matchedSize = {
+          name: item.selectedSize.name,
+          price: unitBasePrice,
+          multiplier: 1,
+        };
+      }
+    } else {
+      // No size explicitly specified: use the first defined size or base price
+      if (sizeRows.length > 0) {
+        unitBasePrice = Number(sizeRows[0].price);
+        matchedSize = {
+          name: sizeRows[0].name,
+          price: unitBasePrice,
+          multiplier: sizeRows[0].multiplier ? Number(sizeRows[0].multiplier) : 1,
+        };
+      } else {
+        matchedSize = {
+          name: 'Standard',
+          price: unitBasePrice,
+          multiplier: 1,
+        };
       }
     }
 
@@ -186,30 +271,11 @@ export async function calculateCartPricing(
     const cleanCode = couponCode.trim().toUpperCase();
 
     // Query authoritative Payload CMS coupons collection
-    const couponRows: Array<{
-      id: number;
-      code: string;
-      description: string | null;
-      discount_type: 'percentage' | 'fixed_amount' | 'free_shipping';
-      discount_value: number;
-      min_spend: number | null;
-      max_discount: number | null;
-      usage_limit_total: number | null;
-      usage_limit_per_customer: number | null;
-      usage_count: number;
-      is_active: boolean;
-      start_date: string | null;
-      end_date: string | null;
-    }> = await prisma.$queryRawUnsafe(
-      `SELECT id, code, description, discount_type, discount_value, min_spend, max_discount,
-              usage_limit_total, usage_limit_per_customer, usage_count, is_active,
-              start_date, end_date
-       FROM payload.cms_coupons
-       WHERE code = $1;`,
-      cleanCode
-    );
+    const c = await prisma.cms_coupons.findUnique({
+      where: { code: cleanCode },
+    });
 
-    if (!couponRows || couponRows.length === 0) {
+    if (!c) {
       return {
         valid: false,
         error: `Coupon "${cleanCode}" is invalid or does not exist.`,
@@ -220,8 +286,6 @@ export async function calculateCartPricing(
         validatedItems,
       };
     }
-
-    const c = couponRows[0];
 
     // Check active flag
     if (!c.is_active) {
@@ -296,10 +360,21 @@ export async function calculateCartPricing(
     const perCustomerLimit = c.usage_limit_per_customer !== null ? Number(c.usage_limit_per_customer) : 0;
     if (customerEmail && customerEmail.trim() && perCustomerLimit > 0) {
       const cleanEmail = customerEmail.trim().toLowerCase();
-      const pastOrdersWithCoupon = await prisma.order.count({
+      // Check past orders for this customer from Payload Orders collection
+      const pastOrdersWithCoupon = await prisma.cms_orders.count({
         where: {
-          senderEmail: { equals: cleanEmail, mode: 'insensitive' },
-          itemsJson: { contains: cleanCode },
+          sender_email: { equals: cleanEmail, mode: 'insensitive' },
+          status: {
+            notIn: [
+              'Payment_Failed',
+              'Payment_Expired',
+              'Cancelled',
+            ],
+          },
+          OR: [
+            { items_json: { contains: cleanCode } },
+            { items: { string_contains: cleanCode } },
+          ],
         },
       });
 
@@ -410,13 +485,12 @@ export async function reserveCouponAtomically(
 
   const executeReservation = async (tx: any): Promise<CouponReservationResult> => {
     // 1. Check if reservation already exists for this orderId
-    const existing: Array<{ id: number; data: any }> = await tx.$queryRawUnsafe(
-      `SELECT id, data FROM "payload"."payload_kv" WHERE "key" = $1;`,
-      reservationKey
-    );
+    const existing = await tx.payload_kv.findUnique({
+      where: { key: reservationKey },
+    });
 
-    if (existing && existing.length > 0) {
-      const data = existing[0].data;
+    if (existing && existing.data) {
+      const data = existing.data as any;
       if (data?.status === 'reserved' || data?.status === 'committed') {
         return {
           success: true,
@@ -461,13 +535,16 @@ export async function reserveCouponAtomically(
       expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     };
 
-    await tx.$executeRawUnsafe(
-      `INSERT INTO "payload"."payload_kv" ("key", "data")
-       VALUES ($1, $2::jsonb)
-       ON CONFLICT ("key") DO UPDATE SET "data" = EXCLUDED."data";`,
-      reservationKey,
-      JSON.stringify(reservationData)
-    );
+    await tx.payload_kv.upsert({
+      where: { key: reservationKey },
+      create: {
+        key: reservationKey,
+        data: reservationData,
+      },
+      update: {
+        data: reservationData,
+      },
+    });
 
     return {
       success: true,
@@ -654,12 +731,13 @@ export async function cleanupExpiredReservations(options?: {
       const couponCode = row.data?.couponCode;
       if (!orderId || !couponCode) continue;
 
-      const order = await tx.order.findUnique({
-        where: { id: orderId },
-        select: { id: true, status: true },
+      // Check order in payload.cms_orders
+      const order = await tx.cms_orders.findUnique({
+        where: { order_id: orderId },
+        select: { id: true, order_id: true, status: true },
       });
 
-      // Scenario A: Order does not exist in public.orders (process crashed before order creation)
+      // Scenario A: Order does not exist in payload.cms_orders (process crashed before order creation)
       if (!order) {
         const releaseRes = await releaseCouponAtomically({ code: couponCode, orderId }, tx);
         if (releaseRes.released) {
@@ -681,16 +759,18 @@ export async function cleanupExpiredReservations(options?: {
         statusLower === 'draft';
 
       if (isPending) {
-        // Transition order in public.orders to 'Payment Expired'
-        await tx.order.updateMany({
+        // Transition order in payload.cms_orders to 'Payment Expired'
+        await tx.cms_orders.updateMany({
           where: {
-            id: orderId,
-            status: { in: ['Payment Pending', 'Pending Payment', 'payment_pending', 'Draft'] },
+            order_id: orderId,
+            status: 'Payment_Pending',
           },
           data: {
-            status: 'Payment Expired',
+            status: 'Payment_Expired',
+            payment_status: 'expired',
           },
         });
+
         expiredOrdersCount++;
 
         // Release the coupon reservation exactly once

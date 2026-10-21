@@ -73,6 +73,7 @@ export interface Config {
     media: Media;
     addons: Addon;
     coupons: Coupon;
+    orders: Order;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -86,6 +87,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     addons: AddonsSelect<false> | AddonsSelect<true>;
     coupons: CouponsSelect<false> | CouponsSelect<true>;
+    orders: OrdersSelect<false> | OrdersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -530,6 +532,111 @@ export interface Coupon {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders".
+ */
+export interface Order {
+  id: number;
+  /**
+   * Human-readable order tracking ID (e.g. FLX-101498).
+   */
+  orderId: string;
+  status:
+    | 'Payment Pending'
+    | 'Order Received & Verified'
+    | 'Order Received'
+    | 'Crafting Floral Arrangement'
+    | 'Out for Delivery'
+    | 'Delivered'
+    | 'Payment Failed'
+    | 'Payment Expired'
+    | 'Cancelled';
+  /**
+   * Tracking bar step (1=Received, 2=Arranging, 3=Out for Delivery, 4=Delivered).
+   */
+  currentStep?: number | null;
+  /**
+   * Order placement date display string (e.g. Oct 15, 2026).
+   */
+  date?: string | null;
+  /**
+   * Final order total in INR (₹).
+   */
+  total: number;
+  /**
+   * Cart items subtotal in INR (₹).
+   */
+  subtotal?: number | null;
+  /**
+   * Delivery fee in INR (₹).
+   */
+  deliveryFee?: number | null;
+  /**
+   * Applied coupon discount in INR (₹).
+   */
+  discount?: number | null;
+  senderName: string;
+  senderEmail: string;
+  senderPhone?: string | null;
+  /**
+   * Keep sender anonymous from recipient.
+   */
+  keepSecret?: boolean | null;
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress: string;
+  recipientApt?: string | null;
+  recipientCity?: string | null;
+  recipientState?: string | null;
+  recipientZip?: string | null;
+  /**
+   * Complimentary handwritten gift card message.
+   */
+  cardMessage?: string | null;
+  /**
+   * Delivery driver instructions / gate notes.
+   */
+  recipientNotes?: string | null;
+  /**
+   * Requested delivery date (e.g. Tomorrow or 2026-10-22).
+   */
+  deliveryDate?: string | null;
+  /**
+   * Delivery window (e.g. Morning (9 AM - 1 PM)).
+   */
+  deliverySlot?: string | null;
+  estimatedDelivery?: string | null;
+  slot?: string | null;
+  /**
+   * Structured order items including size, vase, and add-ons.
+   */
+  items:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Raw JSON string representation of cart items for backward compatibility.
+   */
+  itemsJson?: string | null;
+  paymentMethod?: string | null;
+  paymentStatus?: string | null;
+  razorpayOrderId?: string | null;
+  razorpayPaymentId?: string | null;
+  /**
+   * Secure unguessable token for public order tracking.
+   */
+  trackingToken?: string | null;
+  idempotencyKey?: string | null;
+  razorpaySignature?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -575,6 +682,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'coupons';
         value: number | Coupon;
+      } | null)
+    | ({
+        relationTo: 'orders';
+        value: number | Order;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -800,6 +911,48 @@ export interface CouponsSelect<T extends boolean = true> {
   usageLimitPerCustomer?: T;
   isActive?: T;
   usageCount?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders_select".
+ */
+export interface OrdersSelect<T extends boolean = true> {
+  orderId?: T;
+  status?: T;
+  currentStep?: T;
+  date?: T;
+  total?: T;
+  subtotal?: T;
+  deliveryFee?: T;
+  discount?: T;
+  senderName?: T;
+  senderEmail?: T;
+  senderPhone?: T;
+  keepSecret?: T;
+  recipientName?: T;
+  recipientPhone?: T;
+  recipientAddress?: T;
+  recipientApt?: T;
+  recipientCity?: T;
+  recipientState?: T;
+  recipientZip?: T;
+  cardMessage?: T;
+  recipientNotes?: T;
+  deliveryDate?: T;
+  deliverySlot?: T;
+  estimatedDelivery?: T;
+  slot?: T;
+  items?: T;
+  itemsJson?: T;
+  paymentMethod?: T;
+  paymentStatus?: T;
+  razorpayOrderId?: T;
+  razorpayPaymentId?: T;
+  trackingToken?: T;
+  idempotencyKey?: T;
+  razorpaySignature?: T;
   updatedAt?: T;
   createdAt?: T;
 }

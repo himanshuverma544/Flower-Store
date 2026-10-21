@@ -1,90 +1,30 @@
 /**
- * Prisma seed script
+ * Prisma Seed Script
  * Run: npx prisma db seed
- * Or:  npx tsx prisma/seed.ts
+ *
+ * NOTE: Products, Bouquet Sizes, Add-ons, Vases, and Coupons are now
+ * authoritatively managed through Payload CMS in the "payload" PostgreSQL schema.
+ * Business orders remain in public.orders.
  */
 
 import { PrismaClient } from '@prisma/client';
-import { PRODUCTS } from '../lib/data';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌸 Seeding FloraLux database...');
+  console.log('🌸 FloraLux Database Status Check...');
 
-  // ---- Coupons ---------------------------------------------------------------
-  const coupons = [
-    { code: 'SPRING20', description: '20% Off Spring Blooms', discountPercent: 20 },
-    { code: 'FREEDELIVERY', description: 'Complimentary Express Delivery', freeShipping: true },
-    { code: 'BLOOM10', description: '₹200 Off Any Bouquet', flatDiscount: 200 },
-    { code: 'BLOOM15', description: '15% Off Bloom Club', discountPercent: 15 },
-  ];
+  // Verify connection to database
+  const result: any[] = await prisma.$queryRawUnsafe('SELECT current_database(), current_schema();');
+  console.log('  ✅ Connected to PostgreSQL database:', result[0]?.current_database);
+  console.log('  ℹ️ Products and Coupons are managed via Payload CMS (localhost:3000/admin)');
 
-  for (const coupon of coupons) {
-    await prisma.coupon.upsert({
-      where: { code: coupon.code },
-      update: coupon,
-      create: coupon,
-    });
-    console.log(`  ✅ Coupon: ${coupon.code}`);
-  }
-
-  // ---- Products --------------------------------------------------------------
-  for (const product of PRODUCTS) {
-    await prisma.product.upsert({
-      where: { slug: product.slug },
-      update: {
-        name: product.name,
-        tagline: product.tagline,
-        price: product.price,
-        originalPrice: product.originalPrice,
-        category: product.category,
-        flowerType: product.flowerType,
-        stemCount: product.stemCount,
-        rating: product.rating,
-        reviewCount: product.reviewCount,
-        isBestseller: product.isBestseller,
-        isNew: product.isNew,
-        image: product.image,
-        symbolism: product.symbolism,
-        description: product.description,
-        occasionJson: JSON.stringify(product.occasion),
-        galleryJson: JSON.stringify(product.gallery),
-        careTipsJson: JSON.stringify(product.careTips),
-        sizesJson: JSON.stringify(product.sizes),
-      },
-      create: {
-        id: product.id,
-        slug: product.slug,
-        name: product.name,
-        tagline: product.tagline,
-        price: product.price,
-        originalPrice: product.originalPrice,
-        category: product.category,
-        flowerType: product.flowerType,
-        stemCount: product.stemCount,
-        rating: product.rating,
-        reviewCount: product.reviewCount,
-        isBestseller: product.isBestseller,
-        isNew: product.isNew,
-        image: product.image,
-        symbolism: product.symbolism,
-        description: product.description,
-        occasionJson: JSON.stringify(product.occasion),
-        galleryJson: JSON.stringify(product.gallery),
-        careTipsJson: JSON.stringify(product.careTips),
-        sizesJson: JSON.stringify(product.sizes),
-      },
-    });
-    console.log(`  🌺 Product: ${product.name}`);
-  }
-
-  console.log('\n✨ Seeding complete!');
+  console.log('\n✨ Database seed check complete!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed failed:', e);
+    console.error('❌ Seed check failed:', e);
     process.exit(1);
   })
   .finally(async () => {

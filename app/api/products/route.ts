@@ -1,58 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { Product } from '@/types';
+import { getStorefrontProducts, getStorefrontProductBySlug } from '@/lib/payload';
 
 // Always run on request — never pre-render at build time (needs the database).
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-
-// ---- Helpers ----------------------------------------------------------------
-
-function deserializeProduct(p: {
-  id: string;
-  slug: string;
-  name: string;
-  tagline: string;
-  price: number;
-  originalPrice: number;
-  category: string;
-  flowerType: string;
-  stemCount: number;
-  rating: number;
-  reviewCount: number;
-  isBestseller: boolean;
-  isNew: boolean;
-  image: string;
-  symbolism: string;
-  description: string;
-  occasionJson: string;
-  galleryJson: string;
-  careTipsJson: string;
-  sizesJson: string;
-}): Product {
-  return {
-    id: p.id,
-    slug: p.slug,
-    name: p.name,
-    tagline: p.tagline,
-    price: p.price,
-    originalPrice: p.originalPrice,
-    category: p.category,
-    flowerType: p.flowerType,
-    stemCount: p.stemCount,
-    rating: p.rating,
-    reviewCount: p.reviewCount,
-    isBestseller: p.isBestseller,
-    isNew: p.isNew,
-    image: p.image,
-    symbolism: p.symbolism,
-    description: p.description,
-    occasion: JSON.parse(p.occasionJson),
-    gallery: JSON.parse(p.galleryJson),
-    careTips: JSON.parse(p.careTipsJson),
-    sizes: JSON.parse(p.sizesJson),
-  };
-}
 
 // ---- GET --------------------------------------------------------------------
 
@@ -67,49 +18,51 @@ export async function GET(request: NextRequest) {
 
     // Single product by slug
     if (slug) {
-      const product = await prisma.product.findUnique({ where: { slug } });
+      const product = await getStorefrontProductBySlug(slug);
       if (!product) {
         return NextResponse.json(
           { success: false, message: 'Product not found' },
           { status: 404 }
         );
       }
-      return NextResponse.json({ success: true, data: deserializeProduct(product) });
+      return NextResponse.json({ success: true, data: product });
     }
 
-    // Build where filters
-    const where: Record<string, unknown> = {};
+    // Multiple products with filtering
+    let products = await getStorefrontProducts();
 
     if (category && category !== 'all') {
-      where.category = category;
+      products = products.filter(
+        (p) => p.category.toLowerCase() === category.toLowerCase()
+      );
     }
 
     if (flowerType && flowerType !== 'All') {
-      where.flowerType = { contains: flowerType, mode: 'insensitive' };
+      products = products.filter((p) =>
+        p.flowerType.toLowerCase().includes(flowerType.toLowerCase())
+      );
     }
 
     if (query) {
-      where.OR = [
-        { name: { contains: query, mode: 'insensitive' } },
-        { tagline: { contains: query, mode: 'insensitive' } },
-        { flowerType: { contains: query, mode: 'insensitive' } },
-      ];
+      const q = query.toLowerCase();
+      products = products.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.tagline.toLowerCase().includes(q) ||
+          p.flowerType.toLowerCase().includes(q)
+      );
     }
 
-    let products = await prisma.product.findMany({ where });
-
-    // Occasion filter — needs post-query filtering since it's stored as JSON
     if (occasion && occasion !== 'All') {
-      products = products.filter((p) => {
-        const occasions: string[] = JSON.parse(p.occasionJson);
-        return occasions.includes(occasion);
-      });
+      products = products.filter((p) =>
+        p.occasion.some((o) => o.toLowerCase() === occasion.toLowerCase())
+      );
     }
 
     return NextResponse.json({
       success: true,
       count: products.length,
-      data: products.map(deserializeProduct),
+      data: products,
     });
   } catch (error: any) {
     return NextResponse.json(

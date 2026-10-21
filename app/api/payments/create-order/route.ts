@@ -44,40 +44,39 @@ export async function POST(request: NextRequest) {
     // 2. Check Idempotency: if request was already processed for this idempotency key, return existing order
     if (idempotencyKey && typeof idempotencyKey === 'string' && idempotencyKey.trim()) {
       const cleanIdemKey = idempotencyKey.trim();
-      const existingIdem: Array<{ data: any }> = await prisma.$queryRawUnsafe(
-        `SELECT data FROM "payload"."payload_kv" WHERE "key" = $1;`,
-        `idempotency:${cleanIdemKey}`
-      );
+      const existingIdem = await prisma.payload_kv.findUnique({
+        where: { key: `idempotency:${cleanIdemKey}` },
+      });
 
-      if (existingIdem && existingIdem.length > 0 && existingIdem[0].data?.orderId) {
-        const existingOrderId = existingIdem[0].data.orderId;
-        const existingOrder = await prisma.order.findUnique({
-          where: { id: existingOrderId },
+      if (existingIdem?.data && (existingIdem.data as any).orderId) {
+        const existingOrderId = (existingIdem.data as any).orderId;
+        const existingOrder = await prisma.cms_orders.findUnique({
+          where: { order_id: existingOrderId },
         });
 
-        if (existingOrder && existingOrder.status === 'Payment Pending') {
+        if (existingOrder && (existingOrder.status as string) === 'Payment_Pending') {
           // Retrieve Razorpay order details from payload_kv
-          const rzpData: Array<{ data: any }> = await prisma.$queryRawUnsafe(
-            `SELECT data FROM "payload"."payload_kv" WHERE "key" = $1;`,
-            `razorpay_order:${existingOrderId}`
-          );
-          const tokenData: Array<{ data: any }> = await prisma.$queryRawUnsafe(
-            `SELECT data FROM "payload"."payload_kv" WHERE "key" = $1;`,
-            `order_token:${existingOrderId}`
-          );
+          const rzpData = await prisma.payload_kv.findUnique({
+            where: { key: `razorpay_order:${existingOrderId}` },
+          });
+          const tokenData = await prisma.payload_kv.findUnique({
+            where: { key: `order_token:${existingOrderId}` },
+          });
 
-          if (rzpData && rzpData.length > 0) {
+          if (rzpData?.data) {
+            const rzpObj = rzpData.data as any;
+            const tokenObj = tokenData?.data as any;
             return NextResponse.json({
               success: true,
               isExisting: true,
               orderId: existingOrderId,
-              razorpayOrderId: rzpData[0].data.razorpayOrderId,
-              amount: rzpData[0].data.amount,
-              currency: rzpData[0].data.currency,
+              razorpayOrderId: rzpObj.razorpayOrderId,
+              amount: rzpObj.amount,
+              currency: rzpObj.currency,
               keyId: getRazorpayPublicConfig().keyId!,
-              trackingToken: tokenData?.[0]?.data?.trackingToken,
-              total: existingOrder.total,
-              status: existingOrder.status,
+              trackingToken: tokenObj?.trackingToken || existingOrder.tracking_token,
+              total: Number(existingOrder.total),
+              status: 'Payment Pending',
             });
           }
         }
@@ -86,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Authoritative Server-Side Pricing Recalculation
     // Strictly rejects client-submitted prices and recalculates against Payload CMS database
-    const pricing = await calculateCartPricing(items, couponCode);
+    const pricing = await calculateCartPricing(items, couponCode, sender?.senderEmail);
     if (!pricing.valid) {
       return NextResponse.json(
         { success: false, message: pricing.error || 'Cart validation failed' },
@@ -149,57 +148,67 @@ export async function POST(request: NextRequest) {
           reservedCouponCode = pricing.coupon.code;
         }
 
-        // Step B: Persist order with status 'Payment Pending'
-        await tx.order.create({
+        // Step B: Persist order in Payload CMS Orders collection
+        await tx.cms_orders.create({
           data: {
-            id: orderId!,
+            order_id: orderId!,
+            status: 'Payment_Pending',
+            current_step: 1,
             date: dateStr,
             total: pricing.total,
-            status: 'Payment Pending',
-            currentStep: 1,
-            estimatedDelivery: deliveryDate ?? 'Tomorrow',
+            subtotal: pricing.subtotal,
+            delivery_fee: pricing.shippingFee,
+            discount: pricing.discountAmount,
+            sender_name: sender?.senderName ?? 'Anonymous Gifter',
+            sender_email: sender?.senderEmail ?? '',
+            sender_phone: sender?.senderPhone ?? '',
+            keep_secret: Boolean(sender?.keepSecret),
+            recipient_name: recipient?.fullName ?? 'Valued Recipient',
+            recipient_phone: recipient?.phone ?? '',
+            recipient_address: recipient?.address ?? '',
+            recipient_apt: recipient?.apt ?? '',
+            recipient_city: recipient?.city ?? '',
+            recipient_state: recipient?.state ?? '',
+            recipient_zip: recipient?.zip ?? '',
+            card_message: cardMessage ?? '',
+            recipient_notes: recipient?.notes ?? '',
+            delivery_date: deliveryDate ?? '',
+            delivery_slot: deliverySlot ?? '',
+            estimated_delivery: deliveryDate ?? 'Tomorrow',
             slot: deliverySlot ?? 'Morning (9 AM - 1 PM)',
-
-            recipientName: recipient?.fullName ?? 'Valued Recipient',
-            recipientAddress: recipient?.address ?? '',
-            recipientPhone: recipient?.phone ?? '',
-            recipientApt: recipient?.apt ?? '',
-            recipientCity: recipient?.city ?? '',
-            recipientState: recipient?.state ?? '',
-            recipientZip: recipient?.zip ?? '',
-            recipientNotes: recipient?.notes ?? '',
-
-            senderName: sender?.senderName ?? 'Anonymous Gifter',
-            senderEmail: sender?.senderEmail ?? '',
-            senderPhone: sender?.senderPhone ?? '',
-            keepSecret: sender?.keepSecret ?? false,
-
-            cardMessage: cardMessage ?? '',
-            deliveryDate: deliveryDate ?? '',
-            deliverySlot: deliverySlot ?? '',
-
-            itemsJson: JSON.stringify(itemsToSave),
+            items: itemsToSave as any,
+            items_json: JSON.stringify(itemsToSave),
+            payment_method: 'razorpay',
+            payment_status: 'pending',
+            tracking_token: trackingToken,
+            idempotency_key: idempotencyKey?.trim() || null,
           },
         });
 
         // Step C: Persist unguessable tracking token securely in payload_kv
-        await tx.$executeRawUnsafe(
-          `INSERT INTO "payload"."payload_kv" ("key", "data")
-           VALUES ($1, $2::jsonb)
-           ON CONFLICT ("key") DO UPDATE SET "data" = EXCLUDED."data";`,
-          `order_token:${orderId}`,
-          JSON.stringify({ orderId, trackingToken, createdAt: now.toISOString() })
-        );
+        await tx.payload_kv.upsert({
+          where: { key: `order_token:${orderId}` },
+          create: {
+            key: `order_token:${orderId}`,
+            data: { orderId, trackingToken, createdAt: now.toISOString() },
+          },
+          update: {
+            data: { orderId, trackingToken, createdAt: now.toISOString() },
+          },
+        });
 
         // Step D: Record idempotency mapping if key provided
         if (idempotencyKey && typeof idempotencyKey === 'string' && idempotencyKey.trim()) {
-          await tx.$executeRawUnsafe(
-            `INSERT INTO "payload"."payload_kv" ("key", "data")
-             VALUES ($1, $2::jsonb)
-             ON CONFLICT ("key") DO UPDATE SET "data" = EXCLUDED."data";`,
-            `idempotency:${idempotencyKey.trim()}`,
-            JSON.stringify({ orderId, createdAt: now.toISOString() })
-          );
+          await tx.payload_kv.upsert({
+            where: { key: `idempotency:${idempotencyKey.trim()}` },
+            create: {
+              key: `idempotency:${idempotencyKey.trim()}`,
+              data: { orderId, createdAt: now.toISOString() },
+            },
+            update: {
+              data: { orderId, createdAt: now.toISOString() },
+            },
+          });
         }
       },
       { timeout: 15000, maxWait: 10000 }
@@ -227,9 +236,12 @@ export async function POST(request: NextRequest) {
       // Since external Razorpay call failed, mark local order as 'Payment Failed'
       // and atomically release the reserved coupon.
       try {
-        await prisma.order.update({
-          where: { id: orderId },
-          data: { status: 'Payment Failed' },
+        await prisma.cms_orders.update({
+          where: { order_id: orderId },
+          data: {
+            status: 'Payment_Failed',
+            payment_status: 'failed',
+          },
         });
 
         if (reservedCouponCode) {
@@ -252,33 +264,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Associate Razorpay Order ID in payload_kv (No Prisma Schema Migration Needed)
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "payload"."payload_kv" ("key", "data")
-       VALUES ($1, $2::jsonb)
-       ON CONFLICT ("key") DO UPDATE SET "data" = EXCLUDED."data";`,
-      `razorpay_order:${orderId}`,
-      JSON.stringify({
-        orderId,
-        razorpayOrderId: razorpayOrder.id,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
-        status: razorpayOrder.status,
-        createdAt: now.toISOString(),
-      })
-    );
+    // 6. Associate Razorpay Order ID in payload_kv
+    await prisma.payload_kv.upsert({
+      where: { key: `razorpay_order:${orderId}` },
+      create: {
+        key: `razorpay_order:${orderId}`,
+        data: {
+          orderId,
+          razorpayOrderId: razorpayOrder.id,
+          amount: razorpayOrder.amount,
+          currency: razorpayOrder.currency,
+          status: razorpayOrder.status,
+          createdAt: now.toISOString(),
+        },
+      },
+      update: {
+        data: {
+          orderId,
+          razorpayOrderId: razorpayOrder.id,
+          amount: razorpayOrder.amount,
+          currency: razorpayOrder.currency,
+          status: razorpayOrder.status,
+          createdAt: now.toISOString(),
+        },
+      },
+    });
 
     // Reverse lookup mapping for webhooks: razorpay_id -> orderId
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "payload"."payload_kv" ("key", "data")
-       VALUES ($1, $2::jsonb)
-       ON CONFLICT ("key") DO UPDATE SET "data" = EXCLUDED."data";`,
-      `razorpay_id:${razorpayOrder.id}`,
-      JSON.stringify({
-        orderId,
-        createdAt: now.toISOString(),
-      })
-    );
+    await prisma.payload_kv.upsert({
+      where: { key: `razorpay_id:${razorpayOrder.id}` },
+      create: {
+        key: `razorpay_id:${razorpayOrder.id}`,
+        data: {
+          orderId,
+          createdAt: now.toISOString(),
+        },
+      },
+      update: {
+        data: {
+          orderId,
+          createdAt: now.toISOString(),
+        },
+      },
+    });
+
+    // Also update razorpay_order_id directly in payload.cms_orders
+    await prisma.cms_orders.update({
+      where: { order_id: orderId },
+      data: {
+        razorpay_order_id: razorpayOrder.id,
+      },
+    });
 
     // 7. Return checkout payload to client
     // Never returns RAZORPAY_KEY_SECRET!

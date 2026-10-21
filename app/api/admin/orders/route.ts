@@ -3,6 +3,7 @@ import { executeAuthStrategies, getPayload } from 'payload';
 import configPromise from '@payload-config';
 import { headers as getHeaders } from 'next/headers';
 import { prisma } from '@/lib/db';
+import { enum_cms_orders_status } from '@prisma/client';
 import { CartItem } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,36 @@ const CANONICAL_STATUSES = [
   'Out for Delivery',
   'Delivered',
 ] as const;
+
+function normalizeDisplayStatus(status: string): string {
+  const map: Record<string, string> = {
+    Payment_Pending: 'Payment Pending',
+    Order_Received___Verified: 'Order Received & Verified',
+    Order_Received: 'Order Received',
+    Crafting_Floral_Arrangement: 'Crafting Floral Arrangement',
+    Out_for_Delivery: 'Out for Delivery',
+    Delivered: 'Delivered',
+    Payment_Failed: 'Payment Failed',
+    Payment_Expired: 'Payment Expired',
+    Cancelled: 'Cancelled',
+  };
+  return map[status] || status;
+}
+
+const DISPLAY_TO_PRISMA_STATUS: Record<string, enum_cms_orders_status> = {
+  'Payment Pending': enum_cms_orders_status.Payment_Pending,
+  'Order Received & Verified': enum_cms_orders_status.Order_Received___Verified,
+  'Order Received': enum_cms_orders_status.Order_Received,
+  'Crafting Floral Arrangement': enum_cms_orders_status.Crafting_Floral_Arrangement,
+  'Master Florist Arranging': enum_cms_orders_status.Crafting_Floral_Arrangement,
+  'Out for Delivery': enum_cms_orders_status.Out_for_Delivery,
+  'Out for Hand Delivery': enum_cms_orders_status.Out_for_Delivery,
+  'Delivered': enum_cms_orders_status.Delivered,
+  'Safely Delivered': enum_cms_orders_status.Delivered,
+  'Payment Failed': enum_cms_orders_status.Payment_Failed,
+  'Payment Expired': enum_cms_orders_status.Payment_Expired,
+  'Cancelled': enum_cms_orders_status.Cancelled,
+};
 
 /**
  * Authenticates request using Payload session / token.
@@ -68,40 +99,47 @@ async function authenticateStaff() {
 function serializeAdminOrder(order: any) {
   let items: CartItem[] = [];
   try {
-    items = JSON.parse(order.itemsJson || '[]');
+    if (order.items && typeof order.items === 'object') {
+      items = Array.isArray(order.items) ? order.items : [order.items];
+    } else {
+      items = JSON.parse(order.itemsJson || order.items_json || '[]');
+    }
   } catch {
     items = [];
   }
 
+  const status = normalizeDisplayStatus(order.status);
+  const currentStep = order.currentStep ?? order.current_step ?? (STATUS_STEP_MAP[status] || 1);
+
   return {
-    id: order.id,
+    id: order.order_id || order.id,
     date: order.date,
-    total: order.total,
-    status: order.status,
-    currentStep: order.currentStep ?? (STATUS_STEP_MAP[order.status] || 1),
-    estimatedDelivery: order.estimatedDelivery,
+    total: Number(order.total),
+    status,
+    currentStep: Number(currentStep),
+    estimatedDelivery: order.estimatedDelivery || order.estimated_delivery,
     slot: order.slot,
     recipient: {
-      fullName: order.recipientName,
-      address: order.recipientAddress,
-      phone: order.recipientPhone,
-      apt: order.recipientApt,
-      city: order.recipientCity,
-      state: order.recipientState,
-      zip: order.recipientZip,
-      notes: order.recipientNotes,
+      fullName: order.recipientName || order.recipient_name,
+      address: order.recipientAddress || order.recipient_address,
+      phone: order.recipientPhone || order.recipient_phone,
+      apt: order.recipientApt || order.recipient_apt,
+      city: order.recipientCity || order.recipient_city,
+      state: order.recipientState || order.recipient_state,
+      zip: order.recipientZip || order.recipient_zip,
+      notes: order.recipientNotes || order.recipient_notes,
     },
     sender: {
-      senderName: order.senderName,
-      senderEmail: order.senderEmail,
-      senderPhone: order.senderPhone,
-      keepSecret: order.keepSecret,
+      senderName: order.senderName || order.sender_name,
+      senderEmail: order.senderEmail || order.sender_email,
+      senderPhone: order.senderPhone || order.sender_phone,
+      keepSecret: Boolean(order.keepSecret ?? order.keep_secret),
     },
-    cardMessage: order.cardMessage || '',
-    deliveryDate: order.deliveryDate || '',
-    deliverySlot: order.deliverySlot || '',
+    cardMessage: order.cardMessage || order.card_message || '',
+    deliveryDate: order.deliveryDate || order.delivery_date || '',
+    deliverySlot: order.deliverySlot || order.delivery_slot || '',
     items,
-    createdAt: order.createdAt,
+    createdAt: order.createdAt || order.created_at,
   };
 }
 
@@ -119,10 +157,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
-    // Single order detail query
+    // Single order detail query from Payload CMS Orders
     if (id) {
-      const order = await prisma.order.findFirst({
-        where: { id: { equals: id.trim(), mode: 'insensitive' } },
+      const order = await prisma.cms_orders.findFirst({
+        where: { order_id: { equals: id.trim(), mode: 'insensitive' } },
       });
 
       if (!order) {
@@ -143,62 +181,62 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    // Build Prisma where clause
     const where: any = {};
 
-    // Search filter across ID, recipient, sender, phone
+    // Search filter across ID, recipient, sender, phone, city
     if (search) {
       where.OR = [
-        { id: { contains: search, mode: 'insensitive' } },
-        { recipientName: { contains: search, mode: 'insensitive' } },
-        { senderName: { contains: search, mode: 'insensitive' } },
-        { senderEmail: { contains: search, mode: 'insensitive' } },
-        { recipientPhone: { contains: search, mode: 'insensitive' } },
-        { recipientCity: { contains: search, mode: 'insensitive' } },
+        { order_id: { contains: search, mode: 'insensitive' } },
+        { recipient_name: { contains: search, mode: 'insensitive' } },
+        { sender_name: { contains: search, mode: 'insensitive' } },
+        { sender_email: { contains: search, mode: 'insensitive' } },
+        { recipient_phone: { contains: search, mode: 'insensitive' } },
+        { recipient_city: { contains: search, mode: 'insensitive' } },
       ];
     }
 
     // Status filter
     if (status && status !== 'all') {
-      // Handle status aliases (e.g. 'Order Received' matches both 'Order Received' and 'Order Received & Verified')
       if (status === 'Order Received') {
-        where.status = { in: ['Order Received', 'Order Received & Verified'] };
+        where.status = {
+          in: [
+            enum_cms_orders_status.Order_Received,
+            enum_cms_orders_status.Order_Received___Verified,
+          ],
+        };
       } else if (status === 'Out for Delivery') {
-        where.status = { in: ['Out for Delivery', 'Out for Hand Delivery'] };
+        where.status = enum_cms_orders_status.Out_for_Delivery;
       } else if (status === 'Delivered') {
-        where.status = { in: ['Delivered', 'Safely Delivered'] };
+        where.status = enum_cms_orders_status.Delivered;
       } else if (status === 'Crafting Floral Arrangement') {
-        where.status = { in: ['Crafting Floral Arrangement', 'Master Florist Arranging'] };
-      } else {
-        where.status = { equals: status, mode: 'insensitive' };
+        where.status = enum_cms_orders_status.Crafting_Floral_Arrangement;
+      } else if (DISPLAY_TO_PRISMA_STATUS[status]) {
+        where.status = DISPLAY_TO_PRISMA_STATUS[status];
       }
     }
 
     // Date range filter
     if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) {
-        where.createdAt.gte = new Date(startDate);
-      }
+      where.created_at = {};
+      if (startDate) where.created_at.gte = new Date(startDate);
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        where.createdAt.lte = end;
+        where.created_at.lte = end;
       }
     }
 
     const skip = (page - 1) * limit;
 
-    // Execute count and query concurrently
-    const [totalDocs, orders, statusStats] = await Promise.all([
-      prisma.order.count({ where }),
-      prisma.order.findMany({
+    const [totalDocs, orders, statsRes] = await Promise.all([
+      prisma.cms_orders.count({ where }),
+      prisma.cms_orders.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
-        skip,
+        orderBy: { created_at: 'desc' },
         take: limit,
+        skip,
       }),
-      prisma.order.groupBy({
+      prisma.cms_orders.groupBy({
         by: ['status'],
         _count: { status: true },
       }),
@@ -215,16 +253,18 @@ export async function GET(request: NextRequest) {
       'Delivered': 0,
     };
 
-    statusStats.forEach((s) => {
-      statusCounts.all += s._count.status;
-      if (s.status.includes('Received') || s.status.includes('Verified')) {
-        statusCounts['Order Received'] += s._count.status;
-      } else if (s.status.includes('Crafting') || s.status.includes('Arranging')) {
-        statusCounts['Crafting Floral Arrangement'] += s._count.status;
-      } else if (s.status.includes('Out for')) {
-        statusCounts['Out for Delivery'] += s._count.status;
-      } else if (s.status.includes('Delivered')) {
-        statusCounts['Delivered'] += s._count.status;
+    statsRes.forEach((s) => {
+      const sCount = s._count.status;
+      statusCounts.all += sCount;
+      const display = normalizeDisplayStatus(s.status);
+      if (display.includes('Received') || display.includes('Verified')) {
+        statusCounts['Order Received'] += sCount;
+      } else if (display.includes('Crafting') || display.includes('Arranging')) {
+        statusCounts['Crafting Floral Arrangement'] += sCount;
+      } else if (display.includes('Out for')) {
+        statusCounts['Out for Delivery'] += sCount;
+      } else if (display.includes('Delivered')) {
+        statusCounts['Delivered'] += sCount;
       }
     });
 
@@ -295,41 +335,41 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Find the existing order in Prisma
-    const existing = await prisma.order.findUnique({
-      where: { id: id.trim() },
+    // Find the existing order in payload.cms_orders
+    const existing = await prisma.cms_orders.findFirst({
+      where: { order_id: { equals: id.trim(), mode: 'insensitive' } },
     });
 
     if (!existing) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
 
-    // Update ONLY status, currentStep, and optional delivery slot/eta
-    const updateData: any = {
-      status: cleanStatus,
-      currentStep: targetStep,
-    };
+    const prismaStatus = DISPLAY_TO_PRISMA_STATUS[cleanStatus] || (cleanStatus as enum_cms_orders_status);
 
+    const updateData: any = {
+      status: prismaStatus,
+      current_step: targetStep,
+    };
     if (estimatedDelivery && typeof estimatedDelivery === 'string') {
-      updateData.estimatedDelivery = estimatedDelivery.trim();
+      updateData.estimated_delivery = estimatedDelivery.trim();
     }
     if (slot && typeof slot === 'string') {
       updateData.slot = slot.trim();
     }
 
-    const updated = await prisma.order.update({
-      where: { id: id.trim() },
+    const updated = await prisma.cms_orders.update({
+      where: { id: existing.id },
       data: updateData,
     });
 
     // Structured server-side audit log
     console.log(
-      `[Admin Order Audit] Status updated for order ${updated.id} from "${existing.status}" to "${updated.status}" (Step ${updated.currentStep}) by staff "${user.email}" (${user.role}) at ${new Date().toISOString()}`
+      `[Admin Order Audit] Status updated for order ${updated.order_id} from "${existing.status}" to "${updated.status}" (Step ${updated.current_step}) by staff "${user.email}" (${user.role}) at ${new Date().toISOString()}`
     );
 
     return NextResponse.json({
       success: true,
-      message: `Order ${updated.id} updated to "${updated.status}"`,
+      message: `Order ${updated.order_id} updated to "${normalizeDisplayStatus(updated.status)}"`,
       order: serializeAdminOrder(updated),
     });
   } catch (err: any) {

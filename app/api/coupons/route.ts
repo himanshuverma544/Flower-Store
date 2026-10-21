@@ -57,35 +57,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Fallback: Validate coupon existence and status if no cart items were passed
-    const couponRows: Array<{
-      id: number;
-      code: string;
-      description: string | null;
-      discount_type: 'percentage' | 'fixed_amount' | 'free_shipping';
-      discount_value: number;
-      min_spend: number | null;
-      max_discount: number | null;
-      usage_limit_total: number | null;
-      usage_count: number;
-      is_active: boolean;
-      start_date: string | null;
-      end_date: string | null;
-    }> = await prisma.$queryRawUnsafe(
-      `SELECT id, code, description, discount_type, discount_value, min_spend, max_discount,
-              usage_limit_total, usage_count, is_active, start_date, end_date
-       FROM payload.cms_coupons
-       WHERE code = $1;`,
-      cleanCode
-    );
-
-    if (!couponRows || couponRows.length === 0) {
+    const c = await prisma.cms_coupons.findUnique({
+      where: { code: cleanCode },
+    });
+    
+    if (!c) {
       return NextResponse.json(
         { success: false, message: `Coupon "${cleanCode}" is invalid or does not exist.` },
         { status: 400 }
       );
     }
-
-    const c = couponRows[0];
     if (!c.is_active) {
       return NextResponse.json(
         { success: false, message: `Coupon "${cleanCode}" is currently inactive.` },

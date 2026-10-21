@@ -87,26 +87,27 @@ export async function POST(request: NextRequest) {
     // 5. Event Deduplication: Atomic check-and-set in payload_kv
     const now = new Date();
     const dedupeKey = `webhook_event:${eventId}`;
-    const insertRes: Array<{ id: number }> = await prisma.$queryRawUnsafe(
-      `INSERT INTO "payload"."payload_kv" ("key", "data")
-       VALUES ($1, $2::jsonb)
-       ON CONFLICT ("key") DO NOTHING
-       RETURNING "id";`,
-      dedupeKey,
-      JSON.stringify({
-        eventId,
-        event: eventType,
-        receivedAt: now.toISOString(),
-      })
-    );
-
-    if (!insertRes || insertRes.length === 0) {
-      // Event already processed or in-flight (Idempotent delivery)
-      return NextResponse.json({
-        received: true,
-        deduplicated: true,
-        eventId,
+    try {
+      await prisma.payload_kv.create({
+        data: {
+          key: dedupeKey,
+          data: {
+            eventId,
+            event: eventType,
+            receivedAt: now.toISOString(),
+          },
+        },
       });
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        // Event already processed or in-flight (Idempotent delivery)
+        return NextResponse.json({
+          received: true,
+          deduplicated: true,
+          eventId,
+        });
+      }
+      throw err;
     }
 
     // 6. Handle Supported Events
@@ -126,12 +127,11 @@ export async function POST(request: NextRequest) {
       // Locate local order ID via reverse mapping or notes
       let localOrderId: string | null = null;
       if (rzpOrderId) {
-        const mappingRows: Array<{ data: any }> = await prisma.$queryRawUnsafe(
-          `SELECT data FROM "payload"."payload_kv" WHERE "key" = $1;`,
-          `razorpay_id:${rzpOrderId}`
-        );
-        if (mappingRows && mappingRows.length > 0 && mappingRows[0].data?.orderId) {
-          localOrderId = mappingRows[0].data.orderId;
+        const mappingRow = await prisma.payload_kv.findUnique({
+          where: { key: `razorpay_id:${rzpOrderId}` },
+        });
+        if (mappingRow?.data && (mappingRow.data as any).orderId) {
+          localOrderId = (mappingRow.data as any).orderId;
         }
       }
 
@@ -147,8 +147,8 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const order = await prisma.order.findUnique({
-        where: { id: localOrderId },
+      const order = await prisma.cms_orders.findUnique({
+        where: { order_id: localOrderId },
       });
 
       if (!order) {
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const expectedPaise = Math.round(order.total * 100);
+      const expectedPaise = Math.round(Number(order.total) * 100);
       if (paymentAmount !== expectedPaise) {
         console.error(
           `Webhook: Payment amount mismatch for order ${localOrderId}: expected ${expectedPaise} paise, received ${paymentAmount} paise`
@@ -194,29 +194,32 @@ export async function POST(request: NextRequest) {
       // Atomic state transition
       await prisma.$transaction(
         async (tx) => {
-          const freshOrder = await tx.order.findUnique({
-            where: { id: localOrderId! },
-            select: { status: true, itemsJson: true },
+          const freshOrder = await tx.cms_orders.findUnique({
+            where: { order_id: localOrderId! },
+            select: { status: true, items_json: true },
           });
 
-          if (freshOrder?.status === 'Order Received & Verified') {
+          if (freshOrder?.status === 'Order_Received___Verified') {
             // Already verified (e.g. by client verification endpoint) - idempotent
             return;
           }
 
-          // Mark order paid
-          await tx.order.update({
-            where: { id: localOrderId! },
+          // Mark order paid in payload.cms_orders
+          await tx.cms_orders.update({
+            where: { order_id: localOrderId! },
             data: {
-              status: 'Order Received & Verified',
-              currentStep: 1,
+              status: 'Order_Received___Verified',
+              payment_status: 'paid',
+              razorpay_order_id: rzpOrderId || undefined,
+              razorpay_payment_id: rzpPaymentId,
+              current_step: 1,
             },
           });
 
           // Commit coupon reservation
           let couponCode: string | null = null;
           try {
-            const items = JSON.parse(freshOrder?.itemsJson || '[]');
+            const items = JSON.parse(freshOrder?.items_json || '[]');
             couponCode = items?.[0]?.appliedCoupon || null;
           } catch {
             // ignore
@@ -225,35 +228,54 @@ export async function POST(request: NextRequest) {
           await commitCouponAtomically({ code: couponCode || '', orderId: localOrderId! }, tx);
 
           // Persist payment record in payload_kv
-          await tx.$executeRawUnsafe(
-            `INSERT INTO "payload"."payload_kv" ("key", "data")
-             VALUES ($1, $2::jsonb)
-             ON CONFLICT ("key") DO UPDATE SET "data" = EXCLUDED."data";`,
-            `razorpay_payment:${localOrderId}`,
-            JSON.stringify({
-              orderId: localOrderId,
-              razorpayOrderId: rzpOrderId,
-              razorpayPaymentId: rzpPaymentId,
-              amount: paymentAmount,
-              currency: paymentCurrency,
-              status: paymentStatus,
-              method: payment.method || 'webhook',
-              verifiedAt: now.toISOString(),
-            })
-          );
+          await tx.payload_kv.upsert({
+            where: { key: `razorpay_payment:${localOrderId}` },
+            create: {
+              key: `razorpay_payment:${localOrderId}`,
+              data: {
+                orderId: localOrderId,
+                razorpayOrderId: rzpOrderId,
+                razorpayPaymentId: rzpPaymentId,
+                amount: paymentAmount,
+                currency: paymentCurrency,
+                status: paymentStatus,
+                method: payment.method || 'webhook',
+                verifiedAt: now.toISOString(),
+              },
+            },
+            update: {
+              data: {
+                orderId: localOrderId,
+                razorpayOrderId: rzpOrderId,
+                razorpayPaymentId: rzpPaymentId,
+                amount: paymentAmount,
+                currency: paymentCurrency,
+                status: paymentStatus,
+                method: payment.method || 'webhook',
+                verifiedAt: now.toISOString(),
+              },
+            },
+          });
 
           // Reverse lookup mapping for payment ID -> orderId
-          await tx.$executeRawUnsafe(
-            `INSERT INTO "payload"."payload_kv" ("key", "data")
-             VALUES ($1, $2::jsonb)
-             ON CONFLICT ("key") DO UPDATE SET "data" = EXCLUDED."data";`,
-            `razorpay_payment_id:${rzpPaymentId}`,
-            JSON.stringify({
-              orderId: localOrderId,
-              razorpayOrderId: rzpOrderId,
-              verifiedAt: now.toISOString(),
-            })
-          );
+          await tx.payload_kv.upsert({
+            where: { key: `razorpay_payment_id:${rzpPaymentId}` },
+            create: {
+              key: `razorpay_payment_id:${rzpPaymentId}`,
+              data: {
+                orderId: localOrderId,
+                razorpayOrderId: rzpOrderId,
+                verifiedAt: now.toISOString(),
+              },
+            },
+            update: {
+              data: {
+                orderId: localOrderId,
+                razorpayOrderId: rzpOrderId,
+                verifiedAt: now.toISOString(),
+              },
+            },
+          });
         },
         { timeout: 15000, maxWait: 10000 }
       );
@@ -276,12 +298,11 @@ export async function POST(request: NextRequest) {
       let localOrderId: string | null = null;
 
       if (rzpOrderId) {
-        const mappingRows: Array<{ data: any }> = await prisma.$queryRawUnsafe(
-          `SELECT data FROM "payload"."payload_kv" WHERE "key" = $1;`,
-          `razorpay_id:${rzpOrderId}`
-        );
-        if (mappingRows && mappingRows.length > 0 && mappingRows[0].data?.orderId) {
-          localOrderId = mappingRows[0].data.orderId;
+        const mappingRow = await prisma.payload_kv.findUnique({
+          where: { key: `razorpay_id:${rzpOrderId}` },
+        });
+        if (mappingRow?.data && (mappingRow.data as any).orderId) {
+          localOrderId = (mappingRow.data as any).orderId;
         }
       }
 
@@ -293,9 +314,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true, warning: 'No local order matched' });
       }
 
-      const order = await prisma.order.findUnique({
-        where: { id: localOrderId },
-        select: { id: true, status: true, itemsJson: true },
+      const order = await prisma.cms_orders.findUnique({
+        where: { order_id: localOrderId },
+        select: { order_id: true, status: true, items_json: true },
       });
 
       if (!order) {
@@ -303,7 +324,7 @@ export async function POST(request: NextRequest) {
       }
 
       // CRITICAL: A delayed or out-of-order failure event MUST NOT downgrade a confirmed paid order!
-      if (order.status === 'Order Received & Verified') {
+      if ((order.status as string) === 'Order_Received___Verified') {
         console.warn(
           `Webhook: Ignoring payment.failed for already-verified order ${localOrderId}`
         );
@@ -314,18 +335,21 @@ export async function POST(request: NextRequest) {
       }
 
       // Only transition if order is still 'Payment Pending'
-      if (order.status === 'Payment Pending') {
+      if ((order.status as string) === 'Payment_Pending') {
         await prisma.$transaction(
           async (tx) => {
-            await tx.order.update({
-              where: { id: localOrderId! },
-              data: { status: 'Payment Failed' },
+            await tx.cms_orders.update({
+              where: { order_id: localOrderId! },
+              data: {
+                status: 'Payment_Failed',
+                payment_status: 'failed',
+              },
             });
 
             // Extract coupon code if any to release reservation
             let couponCode: string | null = null;
             try {
-              const items = JSON.parse(order.itemsJson || '[]');
+              const items = JSON.parse(order.items_json || '[]');
               couponCode = items?.[0]?.appliedCoupon || null;
             } catch {
               // ignore
@@ -336,18 +360,26 @@ export async function POST(request: NextRequest) {
             }
 
             // Persist failure record
-            await tx.$executeRawUnsafe(
-              `INSERT INTO "payload"."payload_kv" ("key", "data")
-               VALUES ($1, $2::jsonb)
-               ON CONFLICT ("key") DO UPDATE SET "data" = EXCLUDED."data";`,
-              `razorpay_failed:${localOrderId}`,
-              JSON.stringify({
-                orderId: localOrderId,
-                paymentId: payment.id,
-                errorDescription: payment.error_description || 'Payment failed',
-                failedAt: now.toISOString(),
-              })
-            );
+            await tx.payload_kv.upsert({
+              where: { key: `razorpay_failed:${localOrderId}` },
+              create: {
+                key: `razorpay_failed:${localOrderId}`,
+                data: {
+                  orderId: localOrderId,
+                  paymentId: payment.id,
+                  errorDescription: payment.error_description || 'Payment failed',
+                  failedAt: now.toISOString(),
+                },
+              },
+              update: {
+                data: {
+                  orderId: localOrderId,
+                  paymentId: payment.id,
+                  errorDescription: payment.error_description || 'Payment failed',
+                  failedAt: now.toISOString(),
+                },
+              },
+            });
           },
           { timeout: 15000, maxWait: 10000 }
         );

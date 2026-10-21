@@ -64,9 +64,9 @@ export async function POST(request: NextRequest) {
     const cleanPaymentId = razorpayPaymentId.trim();
     const cleanSignature = razorpaySignature.trim();
 
-    // 2. Locate local order
-    const order = await prisma.order.findUnique({
-      where: { id: cleanOrderId },
+    // 2. Locate local order from Payload CMS Orders collection
+    const order = await prisma.cms_orders.findUnique({
+      where: { order_id: cleanOrderId },
     });
 
     if (!order) {
@@ -78,13 +78,12 @@ export async function POST(request: NextRequest) {
 
     // 3. Authorization check via tracking token if provided
     if (trackingToken && typeof trackingToken === 'string') {
-      const tokenRows: Array<{ data: any }> = await prisma.$queryRawUnsafe(
-        `SELECT data FROM "payload"."payload_kv" WHERE "key" = $1;`,
-        `order_token:${cleanOrderId}`
-      );
+      const tokenRow = await prisma.payload_kv.findUnique({
+        where: { key: `order_token:${cleanOrderId}` },
+      });
 
-      if (tokenRows && tokenRows.length > 0 && tokenRows[0].data?.trackingToken) {
-        if (tokenRows[0].data.trackingToken !== trackingToken.trim()) {
+      if (tokenRow?.data && (tokenRow.data as any).trackingToken) {
+        if ((tokenRow.data as any).trackingToken !== trackingToken.trim()) {
           return NextResponse.json(
             { success: false, message: 'Unauthorized: Invalid tracking token for this order.' },
             { status: 403 }
@@ -94,19 +93,18 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Locate authoritative expected Razorpay order ID from payload_kv
-    const rzpRows: Array<{ data: any }> = await prisma.$queryRawUnsafe(
-      `SELECT data FROM "payload"."payload_kv" WHERE "key" = $1;`,
-      `razorpay_order:${cleanOrderId}`
-    );
+    const rzpRow = await prisma.payload_kv.findUnique({
+      where: { key: `razorpay_order:${cleanOrderId}` },
+    });
 
-    if (!rzpRows || rzpRows.length === 0 || !rzpRows[0].data?.razorpayOrderId) {
+    if (!rzpRow?.data || !(rzpRow.data as any).razorpayOrderId) {
       return NextResponse.json(
         { success: false, message: `No payment session found for order "${cleanOrderId}".` },
         { status: 400 }
       );
     }
 
-    const storedRzpData = rzpRows[0].data;
+    const storedRzpData = rzpRow.data as any;
     const expectedRazorpayOrderId = storedRzpData.razorpayOrderId;
 
     // Validate client-supplied Razorpay order ID if provided
@@ -120,13 +118,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Idempotency & Conflict Check
-    if (order.status === 'Order Received & Verified') {
-      const existingPaymentRows: Array<{ data: any }> = await prisma.$queryRawUnsafe(
-        `SELECT data FROM "payload"."payload_kv" WHERE "key" = $1;`,
-        `razorpay_payment:${cleanOrderId}`
-      );
+    if ((order.status as string) === 'Order_Received___Verified') {
+      const existingPaymentRow = await prisma.payload_kv.findUnique({
+        where: { key: `razorpay_payment:${cleanOrderId}` },
+      });
 
-      const recordedPaymentId = existingPaymentRows?.[0]?.data?.razorpayPaymentId;
+      const recordedPaymentId = (existingPaymentRow?.data as any)?.razorpayPaymentId;
       if (recordedPaymentId && recordedPaymentId !== cleanPaymentId) {
         return NextResponse.json(
           {
@@ -148,7 +145,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (order.status !== 'Payment Pending') {
+    if (order.status !== 'Payment_Pending') {
       return NextResponse.json(
         {
           success: false,
@@ -208,7 +205,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify authoritative amount (paise)
-    const expectedPaise = storedRzpData.amount || Math.round(order.total * 100);
+    const expectedPaise = storedRzpData.amount || Math.round(Number(order.total) * 100);
     if (payment.amount !== expectedPaise) {
       return NextResponse.json(
         {
@@ -235,28 +232,31 @@ export async function POST(request: NextRequest) {
     await prisma.$transaction(
       async (tx) => {
         // Re-read inside transaction for strict concurrency isolation
-        const currentOrder = await tx.order.findUnique({
-          where: { id: cleanOrderId },
-          select: { status: true, itemsJson: true },
+        const currentOrder = await tx.cms_orders.findUnique({
+          where: { order_id: cleanOrderId },
+          select: { status: true, items_json: true },
         });
 
-        if (currentOrder?.status === 'Order Received & Verified') {
+        if (currentOrder?.status === 'Order_Received___Verified') {
           return; // Concurrently updated by webhook
         }
 
-        // Step A: Mark order paid
-        await tx.order.update({
-          where: { id: cleanOrderId },
+        // Step A: Mark order paid in payload.cms_orders
+        await tx.cms_orders.update({
+          where: { order_id: cleanOrderId },
           data: {
-            status: 'Order Received & Verified',
-            currentStep: 1,
+            status: 'Order_Received___Verified',
+            payment_status: 'paid',
+            razorpay_payment_id: cleanPaymentId,
+            razorpay_signature: cleanSignature,
+            current_step: 1,
           },
         });
 
         // Step B: Commit coupon reservation atomically
         let couponCode: string | null = null;
         try {
-          const items = JSON.parse(currentOrder?.itemsJson || '[]');
+          const items = JSON.parse(currentOrder?.items_json || '[]');
           couponCode = items?.[0]?.appliedCoupon || null;
         } catch {
           // ignore
@@ -269,35 +269,54 @@ export async function POST(request: NextRequest) {
         }
 
         // Step C: Persist payment record in payload_kv
-        await tx.$executeRawUnsafe(
-          `INSERT INTO "payload"."payload_kv" ("key", "data")
-           VALUES ($1, $2::jsonb)
-           ON CONFLICT ("key") DO UPDATE SET "data" = EXCLUDED."data";`,
-          `razorpay_payment:${cleanOrderId}`,
-          JSON.stringify({
-            orderId: cleanOrderId,
-            razorpayOrderId: expectedRazorpayOrderId,
-            razorpayPaymentId: cleanPaymentId,
-            amount: payment.amount,
-            currency: payment.currency,
-            status: payment.status,
-            method: payment.method || 'unknown',
-            verifiedAt: now.toISOString(),
-          })
-        );
+        await tx.payload_kv.upsert({
+          where: { key: `razorpay_payment:${cleanOrderId}` },
+          create: {
+            key: `razorpay_payment:${cleanOrderId}`,
+            data: {
+              orderId: cleanOrderId,
+              razorpayOrderId: expectedRazorpayOrderId,
+              razorpayPaymentId: cleanPaymentId,
+              amount: payment.amount,
+              currency: payment.currency,
+              status: payment.status,
+              method: payment.method || 'unknown',
+              verifiedAt: now.toISOString(),
+            },
+          },
+          update: {
+            data: {
+              orderId: cleanOrderId,
+              razorpayOrderId: expectedRazorpayOrderId,
+              razorpayPaymentId: cleanPaymentId,
+              amount: payment.amount,
+              currency: payment.currency,
+              status: payment.status,
+              method: payment.method || 'unknown',
+              verifiedAt: now.toISOString(),
+            },
+          },
+        });
 
         // Step D: Reverse lookup mapping for payment ID -> orderId
-        await tx.$executeRawUnsafe(
-          `INSERT INTO "payload"."payload_kv" ("key", "data")
-           VALUES ($1, $2::jsonb)
-           ON CONFLICT ("key") DO UPDATE SET "data" = EXCLUDED."data";`,
-          `razorpay_payment_id:${cleanPaymentId}`,
-          JSON.stringify({
-            orderId: cleanOrderId,
-            razorpayOrderId: expectedRazorpayOrderId,
-            verifiedAt: now.toISOString(),
-          })
-        );
+        await tx.payload_kv.upsert({
+          where: { key: `razorpay_payment_id:${cleanPaymentId}` },
+          create: {
+            key: `razorpay_payment_id:${cleanPaymentId}`,
+            data: {
+              orderId: cleanOrderId,
+              razorpayOrderId: expectedRazorpayOrderId,
+              verifiedAt: now.toISOString(),
+            },
+          },
+          update: {
+            data: {
+              orderId: cleanOrderId,
+              razorpayOrderId: expectedRazorpayOrderId,
+              verifiedAt: now.toISOString(),
+            },
+          },
+        });
       },
       { timeout: 15000, maxWait: 10000 }
     );

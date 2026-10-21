@@ -16,7 +16,5 @@ out/
 # Vercel
 .vercel/
 
-
-
 # OS files
 .DS_Store

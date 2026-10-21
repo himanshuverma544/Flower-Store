@@ -1,88 +1,552 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL_POOLED")
   directUrl = env("DATABASE_URL")
+  schemas   = ["payload"]
 }
 
-model Order {
-  id               String   @id
-  date             String
-  total            Float
-  status           String
-  currentStep      Int      @default(1)
-  estimatedDelivery String  @default("Tomorrow")
-  slot             String   @default("Morning (9 AM - 1 PM)")
+model cms_addons {
+  id                            Int                             @id @default(autoincrement())
+  name                          String                          @db.VarChar
+  slug                          String                          @unique(map: "cms_addons_slug_idx") @db.VarChar
+  category                      enum_cms_addons_category        @default(chocolate)
+  icon                          String?                         @db.VarChar
+  price                         Decimal                         @db.Decimal
+  stock_quantity                Decimal?                        @default(100) @db.Decimal
+  stock_status                  enum_cms_addons_stock_status    @default(in_stock)
+  is_active                     Boolean?                        @default(true)
+  description                   String?                         @db.VarChar
+  image_id                      Int?
+  sort_order                    Decimal?                        @default(0) @db.Decimal
+  updated_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  created_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  material                      String?                         @db.VarChar
+  dimensions                    String?                         @db.VarChar
+  cms_media                     cms_media?                      @relation(fields: [image_id], references: [id], onUpdate: NoAction, map: "cms_addons_image_id_cms_media_id_fk")
+  cms_products_rels             cms_products_rels[]
+  payload_locked_documents_rels payload_locked_documents_rels[]
 
-  // Recipient
-  recipientName    String
-  recipientAddress String
-  recipientPhone   String
-  recipientApt     String   @default("")
-  recipientCity    String   @default("")
-  recipientState   String   @default("")
-  recipientZip     String   @default("")
-  recipientNotes   String   @default("")
-
-  // Sender
-  senderName       String
-  senderEmail      String
-  senderPhone      String   @default("")
-  keepSecret       Boolean  @default(false)
-
-  // Extras
-  cardMessage      String   @default("")
-  deliveryDate     String   @default("")
-  deliverySlot     String   @default("")
-
-  // Items stored as JSON string
-  itemsJson        String   @default("[]")
-
-  createdAt        DateTime @default(now())
-
-  @@map("orders")
+  @@index([created_at])
+  @@index([image_id], map: "cms_addons_image_idx")
+  @@index([updated_at])
+  @@schema("payload")
 }
 
-model Product {
-  id            String   @id
-  slug          String   @unique
-  name          String
-  tagline       String
-  price         Float
-  originalPrice Float
-  category      String
-  flowerType    String
-  stemCount     Int
-  rating        Float
-  reviewCount   Int
-  isBestseller  Boolean  @default(false)
-  isNew         Boolean  @default(false)
-  image         String
-  symbolism     String
-  description   String
+model cms_categories {
+  id                            Int                             @id @default(autoincrement())
+  name                          String                          @db.VarChar
+  slug                          String                          @unique(map: "cms_categories_slug_idx") @db.VarChar
+  icon                          String?                         @db.VarChar
+  description                   String?                         @db.VarChar
+  image_id                      Int?
+  is_active                     Boolean?                        @default(true)
+  sort_order                    Decimal?                        @default(0) @db.Decimal
+  updated_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  created_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  cms_media                     cms_media?                      @relation(fields: [image_id], references: [id], onUpdate: NoAction, map: "cms_categories_image_id_cms_media_id_fk")
+  cms_products                  cms_products[]
+  cms_products_rels             cms_products_rels[]
+  payload_locked_documents_rels payload_locked_documents_rels[]
 
-  // JSON arrays stored as strings
-  occasionJson  String   @default("[]")
-  galleryJson   String   @default("[]")
-  careTipsJson  String   @default("[]")
-  sizesJson     String   @default("[]")
-
-  createdAt     DateTime @default(now())
-
-  @@map("products")
+  @@index([created_at])
+  @@index([image_id], map: "cms_categories_image_idx")
+  @@index([updated_at])
+  @@schema("payload")
 }
 
-model Coupon {
-  id              String   @id @default(cuid())
-  code            String   @unique
-  description     String
-  discountPercent Int?
-  flatDiscount    Float?
-  freeShipping    Boolean  @default(false)
-  isActive        Boolean  @default(true)
+model cms_coupons {
+  id                            Int                             @id @default(autoincrement())
+  code                          String                          @unique(map: "cms_coupons_code_idx") @db.VarChar
+  description                   String?                         @db.VarChar
+  discount_type                 enum_cms_coupons_discount_type  @default(percentage)
+  discount_value                Decimal                         @db.Decimal
+  min_spend                     Decimal?                        @default(0) @db.Decimal
+  max_discount                  Decimal?                        @db.Decimal
+  start_date                    DateTime?                       @db.Timestamptz(3)
+  end_date                      DateTime?                       @db.Timestamptz(3)
+  usage_limit_total             Decimal?                        @db.Decimal
+  usage_limit_per_customer      Decimal?                        @default(1) @db.Decimal
+  is_active                     Boolean?                        @default(true)
+  usage_count                   Decimal?                        @default(0) @db.Decimal
+  updated_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  created_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  payload_locked_documents_rels payload_locked_documents_rels[]
 
-  @@map("coupons")
+  @@index([created_at])
+  @@index([updated_at])
+  @@schema("payload")
+}
+
+model cms_media {
+  id                            Int                             @id @default(autoincrement())
+  alt                           String                          @db.VarChar
+  caption                       String?                         @db.VarChar
+  updated_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  created_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  url                           String?                         @db.VarChar
+  thumbnail_u_r_l               String?                         @db.VarChar
+  filename                      String?                         @unique(map: "cms_media_filename_idx") @db.VarChar
+  mime_type                     String?                         @db.VarChar
+  filesize                      Decimal?                        @db.Decimal
+  width                         Decimal?                        @db.Decimal
+  height                        Decimal?                        @db.Decimal
+  focal_x                       Decimal?                        @db.Decimal
+  focal_y                       Decimal?                        @db.Decimal
+  sizes_thumbnail_url           String?                         @db.VarChar
+  sizes_thumbnail_width         Decimal?                        @db.Decimal
+  sizes_thumbnail_height        Decimal?                        @db.Decimal
+  sizes_thumbnail_mime_type     String?                         @db.VarChar
+  sizes_thumbnail_filesize      Decimal?                        @db.Decimal
+  sizes_thumbnail_filename      String?                         @db.VarChar
+  sizes_card_url                String?                         @db.VarChar
+  sizes_card_width              Decimal?                        @db.Decimal
+  sizes_card_height             Decimal?                        @db.Decimal
+  sizes_card_mime_type          String?                         @db.VarChar
+  sizes_card_filesize           Decimal?                        @db.Decimal
+  sizes_card_filename           String?                         @db.VarChar
+  sizes_full_url                String?                         @db.VarChar
+  sizes_full_width              Decimal?                        @db.Decimal
+  sizes_full_height             Decimal?                        @db.Decimal
+  sizes_full_mime_type          String?                         @db.VarChar
+  sizes_full_filesize           Decimal?                        @db.Decimal
+  sizes_full_filename           String?                         @db.VarChar
+  objectkey                     String?                         @map("_objectkey") @db.VarChar
+  prefix                        String?                         @db.VarChar
+  cms_addons                    cms_addons[]
+  cms_categories                cms_categories[]
+  cms_products                  cms_products[]
+  cms_products_rels             cms_products_rels[]
+  cms_site_settings             cms_site_settings[]
+  payload_locked_documents_rels payload_locked_documents_rels[]
+
+  @@index([created_at])
+  @@index([sizes_card_filename], map: "cms_media_sizes_card_sizes_card_filename_idx")
+  @@index([sizes_full_filename], map: "cms_media_sizes_full_sizes_full_filename_idx")
+  @@index([sizes_thumbnail_filename], map: "cms_media_sizes_thumbnail_sizes_thumbnail_filename_idx")
+  @@index([updated_at])
+  @@schema("payload")
+}
+
+model cms_orders {
+  id                            Int                             @id @default(autoincrement())
+  order_id                      String                          @unique(map: "cms_orders_order_id_idx") @db.VarChar
+  status                        enum_cms_orders_status          @default(Payment_Pending)
+  current_step                  Decimal?                        @default(1) @db.Decimal
+  date                          String?                         @db.VarChar
+  total                         Decimal                         @db.Decimal
+  subtotal                      Decimal?                        @db.Decimal
+  delivery_fee                  Decimal?                        @db.Decimal
+  discount                      Decimal?                        @db.Decimal
+  sender_name                   String                          @db.VarChar
+  sender_email                  String                          @db.VarChar
+  sender_phone                  String?                         @db.VarChar
+  keep_secret                   Boolean?                        @default(false)
+  recipient_name                String                          @db.VarChar
+  recipient_phone               String                          @db.VarChar
+  recipient_address             String                          @db.VarChar
+  recipient_apt                 String?                         @db.VarChar
+  recipient_city                String?                         @db.VarChar
+  recipient_state               String?                         @db.VarChar
+  recipient_zip                 String?                         @db.VarChar
+  card_message                  String?                         @db.VarChar
+  recipient_notes               String?                         @db.VarChar
+  delivery_date                 String?                         @db.VarChar
+  delivery_slot                 String?                         @db.VarChar
+  estimated_delivery            String?                         @default("Tomorrow") @db.VarChar
+  slot                          String?                         @default("Morning (9 AM - 1 PM)") @db.VarChar
+  items                         Json
+  items_json                    String?                         @db.VarChar
+  payment_method                String?                         @default("razorpay") @db.VarChar
+  payment_status                String?                         @default("pending") @db.VarChar
+  razorpay_order_id             String?                         @db.VarChar
+  razorpay_payment_id           String?                         @db.VarChar
+  tracking_token                String?                         @db.VarChar
+  idempotency_key               String?                         @db.VarChar
+  razorpay_signature            String?                         @db.VarChar
+  updated_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  created_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  payload_locked_documents_rels payload_locked_documents_rels[]
+
+  @@index([created_at])
+  @@index([idempotency_key])
+  @@index([razorpay_order_id])
+  @@index([razorpay_payment_id])
+  @@index([sender_email])
+  @@index([status])
+  @@index([tracking_token])
+  @@index([updated_at])
+  @@schema("payload")
+}
+
+model cms_products {
+  id                            Int                             @id @default(autoincrement())
+  name                          String                          @db.VarChar
+  slug                          String                          @unique(map: "cms_products_slug_idx") @db.VarChar
+  sku                           String?                         @db.VarChar
+  tagline                       String                          @db.VarChar
+  short_description             String?                         @db.VarChar
+  description                   String                          @db.VarChar
+  category_id                   Int
+  price                         Decimal                         @db.Decimal
+  compare_at_price              Decimal?                        @db.Decimal
+  stock_quantity                Decimal?                        @default(100) @db.Decimal
+  stock_status                  enum_cms_products_stock_status  @default(in_stock)
+  flower_type                   String                          @db.VarChar
+  stem_count                    Decimal?                        @default(12) @db.Decimal
+  symbolism                     String?                         @db.VarChar
+  featured_image_id             Int?
+  is_featured                   Boolean?                        @default(false)
+  is_bestseller                 Boolean?                        @default(false)
+  is_new                        Boolean?                        @default(false)
+  status                        enum_cms_products_status        @default(draft)
+  rating                        Decimal?                        @default(5) @db.Decimal
+  review_count                  Decimal?                        @default(0) @db.Decimal
+  meta_title                    String?                         @db.VarChar
+  meta_description              String?                         @db.VarChar
+  updated_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  created_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  cms_categories                cms_categories                  @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "cms_products_category_id_cms_categories_id_fk")
+  cms_media                     cms_media?                      @relation(fields: [featured_image_id], references: [id], onUpdate: NoAction, map: "cms_products_featured_image_id_cms_media_id_fk")
+  cms_products_care_tips        cms_products_care_tips[]
+  cms_products_occasions        cms_products_occasions[]
+  cms_products_rels             cms_products_rels[]
+  cms_products_sizes            cms_products_sizes[]
+  cms_products_tags             cms_products_tags[]
+  payload_locked_documents_rels payload_locked_documents_rels[]
+
+  @@index([category_id], map: "cms_products_category_idx")
+  @@index([created_at])
+  @@index([featured_image_id], map: "cms_products_featured_image_idx")
+  @@index([updated_at])
+  @@schema("payload")
+}
+
+model cms_products_care_tips {
+  order        Int          @map("_order")
+  parent_id    Int          @map("_parent_id")
+  id           String       @id @db.VarChar
+  tip          String       @db.VarChar
+  cms_products cms_products @relation(fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cms_products_care_tips_parent_id_fk")
+
+  @@index([order], map: "cms_products_care_tips_order_idx")
+  @@index([parent_id], map: "cms_products_care_tips_parent_id_idx")
+  @@schema("payload")
+}
+
+model cms_products_occasions {
+  order        Int
+  parent_id    Int
+  value        enum_cms_products_occasions?
+  id           Int                          @id @default(autoincrement())
+  cms_products cms_products                 @relation(fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cms_products_occasions_parent_fk")
+
+  @@index([order])
+  @@index([parent_id], map: "cms_products_occasions_parent_idx")
+  @@schema("payload")
+}
+
+model cms_products_rels {
+  id                Int             @id @default(autoincrement())
+  order             Int?
+  parent_id         Int
+  path              String          @db.VarChar
+  cms_categories_id Int?
+  cms_media_id      Int?
+  cms_addons_id     Int?
+  cms_addons        cms_addons?     @relation(fields: [cms_addons_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cms_products_rels_addons_fk")
+  cms_categories    cms_categories? @relation(fields: [cms_categories_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cms_products_rels_categories_fk")
+  cms_media         cms_media?      @relation(fields: [cms_media_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cms_products_rels_media_fk")
+  cms_products      cms_products    @relation(fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cms_products_rels_parent_fk")
+
+  @@index([cms_addons_id])
+  @@index([cms_categories_id])
+  @@index([cms_media_id])
+  @@index([order])
+  @@index([parent_id], map: "cms_products_rels_parent_idx")
+  @@index([path])
+  @@schema("payload")
+}
+
+model cms_products_sizes {
+  order        Int          @map("_order")
+  parent_id    Int          @map("_parent_id")
+  id           String       @id @db.VarChar
+  name         String       @db.VarChar
+  price        Decimal      @db.Decimal
+  multiplier   Decimal?     @default(1) @db.Decimal
+  cms_products cms_products @relation(fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cms_products_sizes_parent_id_fk")
+
+  @@index([order], map: "cms_products_sizes_order_idx")
+  @@index([parent_id], map: "cms_products_sizes_parent_id_idx")
+  @@schema("payload")
+}
+
+model cms_products_tags {
+  order        Int
+  parent_id    Int
+  value        enum_cms_products_tags?
+  id           Int                     @id @default(autoincrement())
+  cms_products cms_products            @relation(fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cms_products_tags_parent_fk")
+
+  @@index([order])
+  @@index([parent_id], map: "cms_products_tags_parent_idx")
+  @@schema("payload")
+}
+
+model cms_site_settings {
+  id                       Int        @id @default(autoincrement())
+  store_name               String     @default("Floralux Luxury Florist") @db.VarChar
+  tagline                  String?    @default("Artisanal Blooms Handcrafted in India") @db.VarChar
+  currency                 String?    @default("INR") @db.VarChar
+  currency_symbol          String?    @default("₹") @db.VarChar
+  contact_email            String?    @default("concierge@floralux.in") @db.VarChar
+  contact_phone            String?    @default("+91 98765 43210") @db.VarChar
+  address                  String?    @default("Bandra West, Mumbai, Maharashtra 400050") @db.VarChar
+  free_shipping_threshold  Decimal?   @default(2999) @db.Decimal
+  standard_shipping_fee    Decimal?   @default(149) @db.Decimal
+  express_delivery_fee     Decimal?   @default(299) @db.Decimal
+  announcement_bar_enabled Boolean?   @default(true)
+  announcement_bar_text    String?    @default("Complimentary luxury gift box & handwritten message card with every order") @db.VarChar
+  announcement_bar_link    String?    @default("/catalog") @db.VarChar
+  instagram                String?    @default("https://instagram.com/floralux") @db.VarChar
+  whatsapp                 String?    @default("https://wa.me/919876543210") @db.VarChar
+  facebook                 String?    @db.VarChar
+  pinterest                String?    @db.VarChar
+  default_meta_title       String?    @default("Floralux | Luxury Flower Delivery Across India") @db.VarChar
+  default_meta_description String?    @default("Experience artisanal floral arrangements, luxury rose bouquets, and same-day delivery across India with Floralux.") @db.VarChar
+  default_share_image_id   Int?
+  updated_at               DateTime?  @db.Timestamptz(3)
+  created_at               DateTime?  @db.Timestamptz(3)
+  cms_media                cms_media? @relation(fields: [default_share_image_id], references: [id], onUpdate: NoAction, map: "cms_site_settings_default_share_image_id_cms_media_id_fk")
+
+  @@index([default_share_image_id], map: "cms_site_settings_default_share_image_idx")
+  @@schema("payload")
+}
+
+model cms_users {
+  id                            Int                             @id @default(autoincrement())
+  name                          String                          @db.VarChar
+  role                          enum_cms_users_role             @default(shop_manager)
+  updated_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  created_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  email                         String                          @unique(map: "cms_users_email_idx") @db.VarChar
+  reset_password_token          String?                         @db.VarChar
+  reset_password_expiration     DateTime?                       @db.Timestamptz(3)
+  salt                          String?                         @db.VarChar
+  hash                          String?                         @db.VarChar
+  reset_password_requested_at   DateTime?                       @db.Timestamptz(3)
+  login_attempts                Decimal?                        @default(0) @db.Decimal
+  lock_until                    DateTime?                       @db.Timestamptz(3)
+  cms_users_sessions            cms_users_sessions[]
+  payload_locked_documents_rels payload_locked_documents_rels[]
+  payload_preferences_rels      payload_preferences_rels[]
+
+  @@index([created_at])
+  @@index([updated_at])
+  @@schema("payload")
+}
+
+model cms_users_sessions {
+  order      Int       @map("_order")
+  parent_id  Int       @map("_parent_id")
+  id         String    @id @db.VarChar
+  created_at DateTime? @db.Timestamptz(3)
+  expires_at DateTime  @db.Timestamptz(3)
+  cms_users  cms_users @relation(fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cms_users_sessions_parent_id_fk")
+
+  @@index([order], map: "cms_users_sessions_order_idx")
+  @@index([parent_id], map: "cms_users_sessions_parent_id_idx")
+  @@schema("payload")
+}
+
+model payload_kv {
+  id   Int    @id @default(autoincrement())
+  key  String @unique(map: "payload_kv_key_idx") @db.VarChar
+  data Json
+
+  @@schema("payload")
+}
+
+model payload_locked_documents {
+  id                            Int                             @id @default(autoincrement())
+  global_slug                   String?                         @db.VarChar
+  updated_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  created_at                    DateTime                        @default(now()) @db.Timestamptz(3)
+  payload_locked_documents_rels payload_locked_documents_rels[]
+
+  @@index([created_at])
+  @@index([global_slug])
+  @@index([updated_at])
+  @@schema("payload")
+}
+
+model payload_locked_documents_rels {
+  id                       Int                      @id @default(autoincrement())
+  order                    Int?
+  parent_id                Int
+  path                     String                   @db.VarChar
+  cms_users_id             Int?
+  cms_categories_id        Int?
+  cms_products_id          Int?
+  cms_media_id             Int?
+  cms_addons_id            Int?
+  cms_coupons_id           Int?
+  cms_orders_id            Int?
+  cms_addons               cms_addons?              @relation(fields: [cms_addons_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payload_locked_documents_rels_addons_fk")
+  cms_categories           cms_categories?          @relation(fields: [cms_categories_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payload_locked_documents_rels_categories_fk")
+  cms_coupons              cms_coupons?             @relation(fields: [cms_coupons_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payload_locked_documents_rels_coupons_fk")
+  cms_media                cms_media?               @relation(fields: [cms_media_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payload_locked_documents_rels_media_fk")
+  cms_orders               cms_orders?              @relation(fields: [cms_orders_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payload_locked_documents_rels_orders_fk")
+  payload_locked_documents payload_locked_documents @relation(fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payload_locked_documents_rels_parent_fk")
+  cms_products             cms_products?            @relation(fields: [cms_products_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payload_locked_documents_rels_products_fk")
+  cms_users                cms_users?               @relation(fields: [cms_users_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payload_locked_documents_rels_users_fk")
+
+  @@index([cms_addons_id])
+  @@index([cms_categories_id])
+  @@index([cms_coupons_id])
+  @@index([cms_media_id])
+  @@index([cms_orders_id])
+  @@index([cms_products_id])
+  @@index([cms_users_id])
+  @@index([order])
+  @@index([parent_id], map: "payload_locked_documents_rels_parent_idx")
+  @@index([path])
+  @@schema("payload")
+}
+
+model payload_migrations {
+  id         Int      @id @default(autoincrement())
+  name       String?  @db.VarChar
+  batch      Decimal? @db.Decimal
+  updated_at DateTime @default(now()) @db.Timestamptz(3)
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([created_at])
+  @@index([updated_at])
+  @@schema("payload")
+}
+
+model payload_preferences {
+  id                       Int                        @id @default(autoincrement())
+  key                      String?                    @db.VarChar
+  value                    Json?
+  updated_at               DateTime                   @default(now()) @db.Timestamptz(3)
+  created_at               DateTime                   @default(now()) @db.Timestamptz(3)
+  payload_preferences_rels payload_preferences_rels[]
+
+  @@index([created_at])
+  @@index([key])
+  @@index([updated_at])
+  @@schema("payload")
+}
+
+model payload_preferences_rels {
+  id                  Int                 @id @default(autoincrement())
+  order               Int?
+  parent_id           Int
+  path                String              @db.VarChar
+  cms_users_id        Int?
+  payload_preferences payload_preferences @relation(fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payload_preferences_rels_parent_fk")
+  cms_users           cms_users?          @relation(fields: [cms_users_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payload_preferences_rels_users_fk")
+
+  @@index([cms_users_id])
+  @@index([order])
+  @@index([parent_id], map: "payload_preferences_rels_parent_idx")
+  @@index([path])
+  @@schema("payload")
+}
+
+enum enum_cms_addons_category {
+  vase
+  chocolate
+  candle
+  card
+  balloon
+  plush
+  gift_set  @map("gift-set")
+
+  @@schema("payload")
+}
+
+enum enum_cms_addons_stock_status {
+  in_stock
+  out_of_stock
+
+  @@schema("payload")
+}
+
+enum enum_cms_coupons_discount_type {
+  percentage
+  fixed_amount
+  free_shipping
+
+  @@schema("payload")
+}
+
+enum enum_cms_orders_status {
+  Payment_Pending             @map("Payment Pending")
+  Order_Received___Verified   @map("Order Received & Verified")
+  Order_Received              @map("Order Received")
+  Crafting_Floral_Arrangement @map("Crafting Floral Arrangement")
+  Out_for_Delivery            @map("Out for Delivery")
+  Delivered
+  Payment_Failed              @map("Payment Failed")
+  Payment_Expired             @map("Payment Expired")
+  Cancelled
+
+  @@schema("payload")
+}
+
+enum enum_cms_products_occasions {
+  Romance
+  Anniversary
+  Birthday
+  Sympathy
+  Congratulations
+  Thank_You       @map("Thank You")
+  Just_Because    @map("Just Because")
+
+  @@schema("payload")
+}
+
+enum enum_cms_products_status {
+  draft
+  published
+  archived
+
+  @@schema("payload")
+}
+
+enum enum_cms_products_stock_status {
+  in_stock
+  out_of_stock
+  backorder
+
+  @@schema("payload")
+}
+
+enum enum_cms_products_tags {
+  roses
+  exotic
+  pastel
+  vibrant
+  fragrant
+  long_lasting    @map("long-lasting")
+  same_day        @map("same-day")
+  limited_edition @map("limited-edition")
+  pet_friendly    @map("pet-friendly")
+
+  @@schema("payload")
+}
+
+enum enum_cms_users_role {
+  admin
+  shop_manager @map("shop-manager")
+
+  @@schema("payload")
 }

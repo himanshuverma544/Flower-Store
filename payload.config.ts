@@ -12,6 +12,7 @@ import { Media } from './collections/Media';
 import { Products } from './collections/Products';
 import { Addons } from './collections/Addons';
 import { Coupons } from './collections/Coupons';
+import { Orders } from './collections/Orders';
 import { SiteSettings } from './globals/SiteSettings';
 import { migrations } from './migrations';
 
@@ -50,14 +51,14 @@ export default buildConfig({
     suppressHydrationWarning: true,
     components: {
       afterNavLinks: [
-        '@/components/admin/OrdersNavEntry#OrdersNavEntry',
+        '@/components/admin/ExportImportNavEntry#ExportImportNavEntry',
       ],
       views: {
-        orders: {
-          Component: '@/components/admin/OrdersView#OrdersView',
-          path: '/orders',
+        exportImport: {
+          Component: '@/components/admin/ExportImportView#ExportImportView',
+          path: '/export-import',
           meta: {
-            title: 'Orders & Fulfillment | Floralux Admin',
+            title: 'Export / Import | Floralux Admin',
           },
         },
       },
@@ -71,6 +72,7 @@ export default buildConfig({
     Media,
     Addons,
     Coupons,
+    Orders,
   ],
   globals: [
     SiteSettings,
