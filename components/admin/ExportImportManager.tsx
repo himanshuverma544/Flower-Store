@@ -844,12 +844,13 @@ export const ExportImportManager: React.FC<ExportImportManagerProps> = ({ user }
                 onClick={handleRunPreview}
                 disabled={isPreviewing}
                 style={{
+                  
                   padding: '10px 20px',
                   fontSize: '0.875rem',
                   fontWeight: 600,
                   borderRadius: '8px',
                   backgroundColor: 'var(--theme-elevation-800)',
-                  color: '#ffffff',
+                  color: '#000000',
                   border: 'none',
                   cursor: isPreviewing ? 'not-allowed' : 'pointer',
                   opacity: isPreviewing ? 0.7 : 1,
@@ -1300,7 +1301,7 @@ export const ExportImportManager: React.FC<ExportImportManagerProps> = ({ user }
                 <div
                   style={{
                     backgroundColor: 'var(--theme-elevation-900)',
-                    color: '#e2e8f0',
+                    color: '#000000',
                     padding: '14px 18px',
                     borderRadius: '8px',
                     fontFamily: 'monospace',
