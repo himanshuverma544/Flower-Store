@@ -23,6 +23,106 @@ function generateHex24(): string {
 }
 
 /**
+ * Enum normalization helpers to guarantee full compatibility with PostgreSQL
+ * native enum types (handling differences like hyphenated names, underscores, and spaces).
+ */
+export function normalizeAddonCategory(val: any): string {
+  if (!val) return 'vase';
+  const str = String(val).trim().toLowerCase();
+  if (str === 'gift_set' || str === 'gift-set') return 'gift-set';
+  const valid = ['vase', 'chocolate', 'candle', 'card', 'balloon', 'plush', 'gift-set'];
+  return valid.includes(str) ? str : 'vase';
+}
+
+export function normalizeAddonStockStatus(val: any): string {
+  if (!val) return 'in_stock';
+  const str = String(val).trim().toLowerCase().replace(/-/g, '_');
+  return str === 'out_of_stock' ? 'out_of_stock' : 'in_stock';
+}
+
+export function normalizeCouponDiscountType(val: any): string {
+  if (!val) return 'percentage';
+  const str = String(val).trim().toLowerCase().replace(/-/g, '_');
+  const valid = ['percentage', 'fixed_amount', 'free_shipping'];
+  return valid.includes(str) ? str : 'percentage';
+}
+
+export function normalizeOrderStatus(val: any): string {
+  if (!val) return 'Payment Pending';
+  const raw = String(val).trim();
+  const map: Record<string, string> = {
+    'Payment_Pending': 'Payment Pending',
+    'Payment Pending': 'Payment Pending',
+    'Order_Received___Verified': 'Order Received & Verified',
+    'Order Received & Verified': 'Order Received & Verified',
+    'Order_Received': 'Order Received',
+    'Order Received': 'Order Received',
+    'Crafting_Floral_Arrangement': 'Crafting Floral Arrangement',
+    'Crafting Floral Arrangement': 'Crafting Floral Arrangement',
+    'Master Florist Arranging': 'Crafting Floral Arrangement',
+    'Out_for_Delivery': 'Out for Delivery',
+    'Out for Delivery': 'Out for Delivery',
+    'Out for Hand Delivery': 'Out for Delivery',
+    'Delivered': 'Delivered',
+    'Safely Delivered': 'Delivered',
+    'Payment_Failed': 'Payment Failed',
+    'Payment Failed': 'Payment Failed',
+    'Payment_Expired': 'Payment Expired',
+    'Payment Expired': 'Payment Expired',
+    'Cancelled': 'Cancelled',
+  };
+  return map[raw] || 'Payment Pending';
+}
+
+export function normalizeProductStatus(val: any): string {
+  if (!val) return 'published';
+  const str = String(val).trim().toLowerCase();
+  const valid = ['draft', 'published', 'archived'];
+  return valid.includes(str) ? str : 'published';
+}
+
+export function normalizeProductStockStatus(val: any): string {
+  if (!val) return 'in_stock';
+  const str = String(val).trim().toLowerCase().replace(/-/g, '_');
+  const valid = ['in_stock', 'out_of_stock', 'backorder'];
+  return valid.includes(str) ? str : 'in_stock';
+}
+
+export function normalizeProductOccasion(val: any): string | null {
+  if (!val) return null;
+  const raw = String(val).trim();
+  const normalizedKey = raw.replace(/[_\s]+/g, ' ').toLowerCase();
+  const map: Record<string, string> = {
+    'romance': 'Romance',
+    'anniversary': 'Anniversary',
+    'birthday': 'Birthday',
+    'sympathy': 'Sympathy',
+    'congratulations': 'Congratulations',
+    'thank you': 'Thank You',
+    'just because': 'Just Because',
+  };
+  return map[normalizedKey] || null;
+}
+
+export function normalizeProductTag(val: any): string | null {
+  if (!val) return null;
+  const raw = String(val).trim();
+  const normalizedKey = raw.replace(/[_\s]+/g, '-').toLowerCase();
+  const map: Record<string, string> = {
+    'roses': 'roses',
+    'exotic': 'exotic',
+    'pastel': 'pastel',
+    'vibrant': 'vibrant',
+    'fragrant': 'fragrant',
+    'long-lasting': 'long-lasting',
+    'same-day': 'same-day',
+    'limited-edition': 'limited-edition',
+    'pet-friendly': 'pet-friendly',
+  };
+  return map[normalizedKey] || null;
+}
+
+/**
  * Generates an in-depth dry-run preview comparing the package data
  * with current destination database records.
  */
@@ -801,11 +901,11 @@ export async function executeImport(
               WHERE id = $13;`,
               [
                 a.name,
-                a.category,
+                normalizeAddonCategory(a.category),
                 a.icon,
                 a.price,
                 a.stockQuantity,
-                a.stockStatus,
+                normalizeAddonStockStatus(a.stockStatus),
                 a.isActive,
                 a.material,
                 a.dimensions,
@@ -828,11 +928,11 @@ export async function executeImport(
             [
               a.name,
               a.slug,
-              a.category,
+              normalizeAddonCategory(a.category),
               a.icon,
               a.price,
               a.stockQuantity,
-              a.stockStatus,
+              normalizeAddonStockStatus(a.stockStatus),
               a.isActive,
               a.material,
               a.dimensions,
@@ -883,7 +983,7 @@ export async function executeImport(
               WHERE id = $11;`,
               [
                 c.description,
-                c.discountType,
+                normalizeCouponDiscountType(c.discountType),
                 c.discountValue,
                 c.minSpend,
                 c.maxDiscount,
@@ -909,7 +1009,7 @@ export async function executeImport(
             [
               codeUpper,
               c.description,
-              c.discountType,
+              normalizeCouponDiscountType(c.discountType),
               c.discountValue,
               c.minSpend,
               c.maxDiscount,
@@ -942,20 +1042,7 @@ export async function executeImport(
         );
 
         const itemsJson = typeof o.items === 'string' ? o.items : JSON.stringify(o.items || []);
-        const validStatus = [
-          'Order Received',
-          'Order Received & Verified',
-          'Crafting Floral Arrangement',
-          'Master Florist Arranging',
-          'Out for Delivery',
-          'Out for Hand Delivery',
-          'Delivered',
-          'Safely Delivered',
-          'Payment Pending',
-          'Payment Failed',
-          'Payment Expired',
-          'Cancelled',
-        ].includes(o.status) ? o.status : 'Payment Pending';
+        const validStatus = normalizeOrderStatus(o.status);
 
         if (existingRes.rows.length > 0) {
           const destId = existingRes.rows[0].id;
@@ -1188,7 +1275,7 @@ export async function executeImport(
                 p.price,
                 p.compareAtPrice,
                 p.stockQuantity,
-                p.stockStatus,
+                normalizeProductStockStatus(p.stockStatus),
                 p.flowerType,
                 p.stemCount,
                 p.symbolism,
@@ -1196,7 +1283,7 @@ export async function executeImport(
                 p.isFeatured,
                 p.isBestseller,
                 p.isNew,
-                p.status,
+                normalizeProductStatus(p.status),
                 p.rating,
                 p.reviewCount,
                 p.metaTitle,
@@ -1234,7 +1321,7 @@ export async function executeImport(
               p.price,
               p.compareAtPrice,
               p.stockQuantity,
-              p.stockStatus,
+              normalizeProductStockStatus(p.stockStatus),
               p.flowerType,
               p.stemCount,
               p.symbolism,
@@ -1242,7 +1329,7 @@ export async function executeImport(
               p.isFeatured,
               p.isBestseller,
               p.isNew,
-              p.status,
+              normalizeProductStatus(p.status),
               p.rating,
               p.reviewCount,
               p.metaTitle,
@@ -1289,11 +1376,14 @@ export async function executeImport(
           // 5c. Occasions (cms_products_occasions)
           await client.query('DELETE FROM payload.cms_products_occasions WHERE parent_id = $1;', [destProductId]);
           if (p.occasions && p.occasions.length > 0) {
+            let occasionOrder = 1;
             for (let i = 0; i < p.occasions.length; i++) {
+              const normOccasion = normalizeProductOccasion(p.occasions[i]);
+              if (!normOccasion) continue;
               await client.query(
                 `INSERT INTO payload.cms_products_occasions ("order", parent_id, value)
                  VALUES ($1, $2, $3);`,
-                [i + 1, destProductId, p.occasions[i]]
+                [occasionOrder++, destProductId, normOccasion]
               );
             }
           }
@@ -1301,11 +1391,14 @@ export async function executeImport(
           // 5d. Tags (cms_products_tags)
           await client.query('DELETE FROM payload.cms_products_tags WHERE parent_id = $1;', [destProductId]);
           if (p.tags && p.tags.length > 0) {
+            let tagOrder = 1;
             for (let i = 0; i < p.tags.length; i++) {
+              const normTag = normalizeProductTag(p.tags[i]);
+              if (!normTag) continue;
               await client.query(
                 `INSERT INTO payload.cms_products_tags ("order", parent_id, value)
                  VALUES ($1, $2, $3);`,
-                [i + 1, destProductId, p.tags[i]]
+                [tagOrder++, destProductId, normTag]
               );
             }
           }

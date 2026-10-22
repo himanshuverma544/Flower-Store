@@ -33,6 +33,22 @@ const ORDER_STATUS_REVERSE_MAP: Record<string, string> = {
   Cancelled: 'Cancelled',
 };
 
+const ADDON_CATEGORY_REVERSE_MAP: Record<string, string> = {
+  gift_set: 'gift-set',
+};
+
+const OCCASION_REVERSE_MAP: Record<string, string> = {
+  Thank_You: 'Thank You',
+  Just_Because: 'Just Because',
+};
+
+const TAG_REVERSE_MAP: Record<string, string> = {
+  long_lasting: 'long-lasting',
+  same_day: 'same-day',
+  limited_edition: 'limited-edition',
+  pet_friendly: 'pet-friendly',
+};
+
 export interface ExportOptions {
   collections?: {
     media?: boolean;
@@ -155,7 +171,7 @@ export async function exportCatalog(options?: ExportOptions): Promise<ExportPack
         sourceId: row.id,
         name: row.name,
         slug: row.slug,
-        category: row.category,
+        category: ADDON_CATEGORY_REVERSE_MAP[row.category] || row.category,
         icon: row.icon || null,
         price: Number(row.price),
         stockQuantity: Number(row.stock_quantity || 100),
@@ -328,8 +344,12 @@ export async function exportCatalog(options?: ExportOptions): Promise<ExportPack
           tip: t.tip,
           order: t.order,
         })),
-        occasions: row.cms_products_occasions.map((o) => o.value).filter(Boolean) as string[],
-        tags: row.cms_products_tags.map((t) => t.value).filter(Boolean) as string[],
+        occasions: row.cms_products_occasions
+          .map((o) => (o.value ? OCCASION_REVERSE_MAP[o.value] || o.value : null))
+          .filter(Boolean) as string[],
+        tags: row.cms_products_tags
+          .map((t) => (t.value ? TAG_REVERSE_MAP[t.value] || t.value : null))
+          .filter(Boolean) as string[],
         gallery,
         additionalCategories,
 
